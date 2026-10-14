@@ -8,4 +8,5 @@
 
 ### Features
 
+- add layered architecture skeleton with eslint boundaries ([035caec](https://github.com/stsgs1980/Resume-audit/commit/035caec7fbdc9c2349642e09c68fc8a43f21196d))
 - add Vite + React entry point and Fastify dependencies ([1d23c5f](https://github.com/stsgs1980/Resume-audit/commit/1d23c5f0e35136ce6dd8c3d349a2eb3760f59296))
