@@ -96,6 +96,88 @@ export default [
       "jsx-a11y/no-redundant-roles": "error",
     },
   },
+  // ===== Layered architecture boundaries =====
+  {
+    files: ["src/core/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/schemas/**", "**/llm/**", "**/server/**", "**/ui/**"],
+              message: "src/core не может импортировать из других слоёв",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/schemas/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/core/**", "**/llm/**", "**/server/**", "**/ui/**"],
+              message: "src/schemas не зависит от других слоёв",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/llm/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/server/**", "**/ui/**"],
+              message: "src/llm не может импортировать из server и ui",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/server/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/ui/**"],
+              message: "src/server не может импортировать из ui",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/ui/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/core/**", "**/llm/**"],
+              message: "src/ui не может импортировать из core и llm",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // ===== End layered architecture boundaries =====
   {
     // Template's own tooling tests: vitest globals + intentional fixtures.
     // Must stay last: overrides the code rules above for tests/**.
