@@ -10,7 +10,7 @@ fi
 
 echo "Generating CHANGELOG.md..."
 rm -f CHANGELOG.md
-npx conventional-changelog -p angular -i CHANGELOG.md -s
+npx conventional-changelog -p angular -i CHANGELOG.md -o CHANGELOG.md
 
 # Prepend markdownlint disable comment
 TEMP_FILE=$(mktemp)
