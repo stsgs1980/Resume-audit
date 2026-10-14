@@ -5,6 +5,7 @@
 ### Bug Fixes
 
 - **core:** fix gap detection and causality source markers ([76cad40](https://github.com/stsgs1980/Resume-audit/commit/76cad408e3514fae0e1189dbbb0a60b22243c237))
+- **husky:** run lint-staged and file-length check on pre-commit ([717dce4](https://github.com/stsgs1980/Resume-audit/commit/717dce4ed2b9862675f7997bc0008c180544f01e))
 - repair changelog generation after CLI migration ([4adbbe3](https://github.com/stsgs1980/Resume-audit/commit/4adbbe313ea7117e64d3d341ad9a3ba98881d3fb))
 
 ### Features
@@ -16,3 +17,4 @@
 - **core:** add number normalization and cross-check ([abe4853](https://github.com/stsgs1980/Resume-audit/commit/abe4853811d4f7942407d7178346315a8ea423d0))
 - **core:** add per-role skill rules and content detectors ([2638b5b](https://github.com/stsgs1980/Resume-audit/commit/2638b5bb0e8564ea21de87e5ced6c8fc82627848))
 - **core:** add present resolution, gaps and overlaps ([7eded4a](https://github.com/stsgs1980/Resume-audit/commit/7eded4ae6e61274bb5f96948125ad3f0106ed988))
+- **schemas:** add zod schemas for facts, evidence, claims, audit, validation, stage-state ([6f82137](https://github.com/stsgs1980/Resume-audit/commit/6f821373213c9b78f7e0b0518ffdd11a3263d9ac))
