@@ -268,7 +268,9 @@ data/
 
 Глобальный флаг `allStale` — ошибка проектирования.
 
-Источник правды — `src/schemas/stage-state.ts`. В записи документа
+Источник правды — `src/schemas/stage-state.ts`. `run_id` — `z.string()`,
+не nullable; при отсутствии файла возвращается `""`.
+В записи документа
 обязателен только `stale: boolean`; `facts_hash`, `prompt_version`,
 `model_id`, `generated_at` опциональны — поэтому запись вида
 `{ "stale": true }` валидна.

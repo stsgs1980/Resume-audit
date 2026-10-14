@@ -15,7 +15,7 @@
 
 | Гейт | Что проверяется                     | Что блокирует         |
 | ---- | ----------------------------------- | --------------------- |
-| G1   | 92 теста ядра зелёные               | Этапы 9–12 (LLM-слой) |
+| G1   | Тесты ядра зелёные                  | Этапы 9–12 (LLM-слой) |
 | G2   | Схемы Zod валидны                   | Этапы 9–12            |
 | G3   | Все линтеры зелёные                 | Коммит                |
 | G4   | `share_of_applications` в 0.99–1.01 | Экспорт               |
@@ -82,27 +82,32 @@
 - [x] Тест 23 (security): `share_of_applications` = 1.05 -> ошибка
 - [x] Тест 24 (security): телефон не блокирует экспорт
 
-**Гейт G1: все 92 теста зелёные.**
+**Гейт G1: все 154 теста зелёные.**
 
 ## Фаза 2. Схемы и данные
 
 ### Шаг 6. Zod-схемы
 
-- [ ] `src/schemas/facts.ts`
-- [ ] `src/schemas/evidence.ts`
-- [ ] `src/schemas/claims.ts`
-- [ ] `src/schemas/audit.ts`
-- [ ] `src/schemas/validation.ts`
-- [ ] `src/schemas/stage-state.ts`
+- [x] `src/schemas/facts.ts`
+- [x] `src/schemas/evidence.ts`
+- [x] `src/schemas/claims.ts`
+- [x] `src/schemas/audit.ts`
+- [x] `src/schemas/validation.ts`
+- [x] `src/schemas/stage-state.ts`
 
 ### Шаг 7. Хранилище
 
-- [ ] `src/server/storage/` — атомарная запись, чтение
-- [ ] `facts_hash` и `meta_hash`
-- [ ] Locking `facts.json`
-- [ ] `stage-state.json` — по записи на документ
-- [ ] Миграции схем
-- [ ] Тест 22 (security): path traversal отклоняется
+- [x] `src/server/storage/` — атомарная запись, чтение
+- [x] `facts_hash` и `meta_hash`
+- [x] Locking `facts.json`
+- [x] `stage-state.json` — по записи на документ
+- [ ] Миграции схем — отложено, отдельная задача
+- [x] Тест 22 (security): path traversal отклоняется
+      (перенесён сюда из Шага 5)
+
+Файлы: `errors.ts`, `paths.ts`, `files.ts`, `hash.ts`, `lock.ts`,
+`stage-state.ts`, `workspaces.ts`, `index.ts`.
+Данные лежат в `data/workspaces/<slug>/`, не в плоской `data/`.
 
 **Гейт G2: схемы валидны.**
 
@@ -185,7 +190,7 @@
 - [ ] Папка с реальными файлами читается, CP1251 распознан
 - [ ] Тесты 3 и 4 проходят: 262 и 261 одновременно
 - [ ] Тест 7 — воспроизведение бага hh.ru
-- [ ] Все 92 теста проходят
+- [ ] Все 154 теста проходят
 - [ ] При недоступном opencode — ядро работает, LLM-этапы заблокированы
 - [ ] StructuredOutputError показывает диагностику
 - [ ] Подставное число блокирует экспорт; телефон — не блокирует

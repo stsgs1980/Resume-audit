@@ -126,13 +126,14 @@ npm run dev
 
 ## Статус разработки
 
-Проект в активной разработке. Закрыта Фаза 0 (спецификация).
+Проект в активной разработке. Закрыты Фазы 0–2:
+спецификация, ядро, схемы и данные.
 
 | Фаза               | Статус |
 | ------------------ | ------ |
 | 0. Спецификация    | [OK]   |
 | 1. Ядро            | [OK]   |
-| 2. Схемы данных    | [TODO] |
+| 2. Схемы данных    | [OK]   |
 | 3. LLM-слой        | [TODO] |
 | 4. Этапы конвейера | [TODO] |
 | 5. UI              | [TODO] |
@@ -154,7 +155,7 @@ npm run dev
 | `npm run lint:md`           | markdownlint                          |
 | `npm run format`            | Prettier (запись)                     |
 | `npm run format:check`      | Prettier (проверка, как в CI)         |
-| `npm test`                  | Vitest (92 теста)                     |
+| `npm test`                  | Vitest (154 теста)                    |
 | `npm run test:watch`        | Vitest (watch)                        |
 | `npm run test:coverage`     | Vitest + coverage                     |
 | `npm run check:file-length` | Проверка длины файлов (лимит 250)     |
@@ -215,6 +216,7 @@ src/
     audit.ts
     validation.ts
     stage-state.ts
+    index.ts             ← реэкспорт схем и типов
   llm/
     client.ts
     session.ts
@@ -223,7 +225,8 @@ src/
   server/
     index.ts
     routes/
-    storage/
+    storage/             ← paths, files, hash, lock,
+                           stage-state, workspaces, errors
   ui/
     components/
     pages/
