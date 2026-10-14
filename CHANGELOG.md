@@ -4,6 +4,7 @@
 
 ### Bug Fixes
 
+- **core:** fix gap detection and causality source markers ([76cad40](https://github.com/stsgs1980/Resume-audit/commit/76cad408e3514fae0e1189dbbb0a60b22243c237))
 - repair changelog generation after CLI migration ([4adbbe3](https://github.com/stsgs1980/Resume-audit/commit/4adbbe313ea7117e64d3d341ad9a3ba98881d3fb))
 
 ### Features
