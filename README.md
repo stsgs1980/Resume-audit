@@ -1,111 +1,312 @@
-# webstorm-config
+# Resume Audit
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/stsgs1980/webstorm-config/actions/workflows/ci.yml/badge.svg)](https://github.com/stsgs1980/webstorm-config/actions/workflows/ci.yml)
+[![CI](https://github.com/stsgs1980/resume-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/stsgs1980/resume-audit/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescript.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D24.15.0-brightgreen.svg)](https://nodejs.org/)
-[![WebStorm](https://img.shields.io/badge/WebStorm-2026.2-orange.svg)](https://www.jetbrains.com/webstorm/)
+[![ESLint](https://img.shields.io/badge/ESLint-9.x-4B32C3.svg)](https://eslint.org/)
+[![Vitest](https://img.shields.io/badge/Vitest-5.x-6E9F18.svg)](https://vitest.dev/)
 
-Репозиторий-**шаблон** настроек для WebStorm: ESLint, Prettier, Stylelint, Vitest, Husky, AI rules.
+> **Status**: ACTIVE
+> **Last Updated**: 2026-10-14
 
-## Этот README vs README.template.md
+## Overview
 
-| Файл                        | Назначение                                                      |
-| --------------------------- | --------------------------------------------------------------- |
-| **README.md** (этот файл)   | Документация репозитория `webstorm-config` на GitHub            |
-| **README.template.md**      | Копируется в **ваш** проект как `README.md` после fork (Step 1) |
-| **docs/getting-started.md** | Шаги после fork — остаётся в проекте, не переписывается         |
+**Resume Audit** — локальное веб-приложение для строгого аудита резюме кандидата
+под поиск работы на hh.ru.
 
-## Что есть в шаблоне (и чего нет)
+Приложение решает главную проблему LLM-генерации резюме — **галлюцинации** —
+архитектурно, а не промптом «не выдумывай». Источник правды (`facts.json`)
+отделён от генерации, все числа проверяются кодом, экспорт заблокирован
+до полной согласованности.
 
-> **Шаблон настроек, не приложение:** нет `src/`, нет `npm run dev` до Steps 2–4 в
-> [docs/getting-started.md](docs/getting-started.md).
+Работает на `127.0.0.1`, использует локальный opencode server как LLM-провайдер.
+Данные не покидают машину, кроме вызовов модели.
 
-| Есть сразу после `npm install`  | Нет до настройки проекта |
-| ------------------------------- | ------------------------ |
-| Линтеры, Prettier, Husky        | `src/`, UI-код           |
-| Vitest (`passWithNoTests`)      | `npm run dev` / сборщик  |
-| `react` в deps (для ESLint/TSX) | Vite / Next (Step 2)     |
+## Table of Contents
 
-`react` и `react-dom` в `dependencies` — **для линтинга и TypeScript (JSX)**, не для запуска
-приложения. Сборщик добавляете на Step 2. Проект без React: удалите их и поправьте
-`tsconfig.json` (`jsx`) и `eslint.config.js` (React-правила) — детали в Step 2
-[getting-started](docs/getting-started.md).
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Scripts](#scripts)
+- [Docs](#docs)
+- [Architecture](#architecture)
+- [Contributing](#contributing)
+- [Conventions](#conventions)
+- [Limitations](#limitations)
+- [License](#license)
 
-## Quick Start (создать проект из шаблона)
+## Features
 
-После любого Option выполните обязательные шаги из [After fork](#after-fork-кратко).
+- **8 этапов конвейера**: файлы → факты → аудит → вопросы → роли → ATS →
+  генерация → верификация.
+- **Источник правды**: `facts.json` содержит только подтверждённые факты.
+  Стаж, доли и производные — вычисляются.
+- **Человек в цикле**: этап 4 — очередь вопросов с карточками `evidence`,
+  без которых факт не становится подтверждённым.
+- **Детерминированное ядро**: даты, стаж, нормализация чисел, блок-листы,
+  ATS, верификация — чистый TypeScript, без LLM.
+- **Двухслойная верификация**: слой 1 (код) проверяет все числа, роли,
+  оговорки, запрещённые слова; слой 2 (LLM) перечисляет числа своего текста
+  для сверки.
+- **Per-role allowlist**: каждый факт привязан к целевым ролям. Число
+  из Sales Operations не проходит в версию AI Product Owner.
+- **По-документная инвалидация**: `facts_hash` хранится отдельно для каждой
+  версии резюме. Перегенерация версии 2 не гасит версии 1 и 3.
+- **Fail-closed экспорт**: экспорт заблокирован при stale-документе,
+  неразрешённых расхождениях, неверной сумме долей или отсутствии
+  обязательного поля hh.ru.
+- **Двусторонняя трассируемость**: клик по числу в резюме открывает запись
+  в `facts.json` и цитату в исходном файле — и наоборот.
+- **Три целевые роли**: sales / salesops / aipo. Каждая — отдельная версия
+  резюме с собственным системным промтом.
+- **Два режима интерфейса**: Обзор (дашборд) и Ревью (резюме + рекомендации).
 
-### Option 1: GitHub Template (recommended)
+### Чего приложение не делает
+
+- Не обращается к hh.ru и не скрейпит сайт. Только локальные файлы.
+- Не знает и не моделирует закрытые алгоритмы ранжирования hh.ru.
+- Не выдумывает факты. Утверждение без подтверждения получает статус,
+  а не попадает в резюме.
+- Не проверяет факты через работодателей. Находит внутренние противоречия
+  и требует карточек доказательств.
+- Не публикует резюме без прохождения верификации.
+
+## Tech Stack
+
+- **Language**: TypeScript 5.9 (strict, ESM)
+- **Runtime**: Node.js >= 24.15.0
+- **Server**: Fastify (schema-driven API, `app.inject()` для тестов)
+- **UI**: Vite + React 19, `shadcn/ui` (Base UI) + `TanStack Table`
+- **Schemas**: Zod — единый контракт для API, LLM structured output,
+  `facts.json`
+- **LLM**: opencode server через `@opencode-ai/sdk`
+- **Testing**: Vitest 5 + coverage-v8
+- **Linting**: ESLint 9 (с границами между слоями), Stylelint, markdownlint,
+  Prettier
+- **Hooks**: Husky, lint-staged, Commitlint
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js >= 24.15.0
+- npm >= 11.0.0
+- [opencode](https://opencode.ai) >= 2.0.28 — установлен и доступен
+  как `opencode`
+- WebStorm 2026.2+ (опционально, для интеграции через ACP)
+
+### Installation
 
 ```bash
-gh repo create my-project --template stsgs1980/webstorm-config --clone
-cd my-project
+git clone <repository-url>
+cd resume-audit
 npm install
 ```
 
-### Option 2: `degit` (no git history)
+### Запуск opencode server
+
+В отдельном терминале:
 
 ```bash
-npx degit stsgs1980/webstorm-config my-project
-cd my-project
-npm install
+opencode serve
 ```
 
-### Option 3: Manual clone
+Сервис поднимется на динамическом порту (см. `opencode service status`).
+Приложение подключается к нему через `@opencode-ai/sdk`.
+
+### Запуск приложения
 
 ```bash
-git clone https://github.com/stsgs1980/webstorm-config my-project
-cd my-project
-rm -rf .git
-git init
-npm install
+npm run dev
 ```
 
-### Package managers
+Открыть `http://localhost:4174`.
 
-| Manager | Install        | Lock file           |
-| ------- | -------------- | ------------------- |
-| npm     | `npm install`  | `package-lock.json` |
-| pnpm    | `pnpm install` | `pnpm-lock.yaml`    |
-| Bun     | `bun install`  | `bun.lockb`         |
+### CHANGELOG.md (важно для шаблона)
 
-## What's Included
+При клонировании шаблона `CHANGELOG.md` содержит историю **webstorm-config**,
+а не этого проекта.
 
-| Tool             | Config                                       |
-| ---------------- | -------------------------------------------- |
-| **ESLint**       | `eslint.config.js` — TS/JS/JSX, React, a11y  |
-| **Stylelint**    | `.stylelintrc.json` — Tailwind v4 at-rules   |
-| **Prettier**     | `.prettierrc`, `.prettierignore`             |
-| **markdownlint** | `.markdownlint.json`                         |
-| **TypeScript**   | `tsconfig.json` (strict)                     |
-| **Git hooks**    | Husky + lint-staged                          |
-| **Commitlint**   | Conventional Commits                         |
-| **EditorConfig** | `.editorconfig`                              |
-| **WebStorm**     | `webstorm-codestyle.xml`, `.idea/` templates |
-| **AI Rules**     | `.aiassistant/rules/AI Rules.md`             |
-| **Testing**      | Vitest — `vitest.config.ts`                  |
+```bash
+rm CHANGELOG.md
+git add CHANGELOG.md
+git commit -m "chore: reset changelog for new project"
+```
 
-**Docs (едут в fork):** [getting-started](docs/getting-started.md),
-[WebStorm](docs/webstorm.md), [testing](docs/testing.md), [markdown](docs/markdown.md),
-[live templates](docs/live-templates/README.md).
+Первый запуск в новом проекте из шаблона —
+[docs/getting-started.md](docs/getting-started.md).
 
-## After fork (кратко)
+IDE: [docs/webstorm.md](docs/webstorm.md).
 
-1. Обновите `package.json`: `name`, `description`.
-2. `README.template.md` -> `README.md`, заполнить Overview / Features / Architecture.
-3. Удалить `CHANGELOG.md` (история шаблона, не вашего проекта):
+Спецификация проекта —
+[docs/superpowers/specs/SPEC.md](docs/superpowers/specs/SPEC.md).
+План сборки — [docs/superpowers/plans/BUILD.md](docs/superpowers/plans/BUILD.md).
 
-   ```bash
-   rm CHANGELOG.md && git add CHANGELOG.md && git commit -m "chore: reset changelog for new project"
-   ```
+## Scripts
 
-4. WebStorm — [docs/webstorm.md](docs/webstorm.md).
-5. Фреймворк, `src/`, скрипты — [docs/getting-started.md](docs/getting-started.md) (Steps 2–5).
+| Команда                     | Описание                              |
+| --------------------------- | ------------------------------------- |
+| `npm run dev`               | Vite dev-server + Fastify (порт 4174) |
+| `npm run build`             | Сборка UI + компиляция сервера        |
+| `npm start`                 | Запуск собранного приложения          |
+| `npm run lint`              | ESLint                                |
+| `npm run typecheck`         | TypeScript (`tsc --noEmit`)           |
+| `npm run lint:css`          | Stylelint                             |
+| `npm run lint:md`           | markdownlint                          |
+| `npm run format`            | Prettier (запись)                     |
+| `npm run format:check`      | Prettier (проверка, как в CI)         |
+| `npm test`                  | Vitest (24 теста ядра)                |
+| `npm run test:watch`        | Vitest (watch)                        |
+| `npm run test:coverage`     | Vitest + coverage                     |
+| `npm run check:file-length` | Проверка длины файлов (лимит 250)     |
+
+## Docs
+
+| Документ                                                           | О чём                                         |
+| ------------------------------------------------------------------ | --------------------------------------------- |
+| [SPEC.md](docs/superpowers/specs/SPEC.md)                          | Спецификация системы: схемы, конвенции, этапы |
+| [BUILD.md](docs/superpowers/plans/BUILD.md)                        | План сборки: порядок, гейты, тесты            |
+| [getting-started.md](docs/getting-started.md)                      | Фреймворк, `src/`, Tailwind, проверка         |
+| [webstorm.md](docs/webstorm.md)                                    | Настройка WebStorm, ACP, opencode             |
+| [testing.md](docs/testing.md)                                      | Vitest, `jsdom`, Testing Library              |
+| [markdown.md](docs/markdown.md)                                    | Правила оформления `.md`                      |
+| [AGENTS.md](AGENTS.md)                                             | Конвенции проекта для opencode                |
+| [.aiassistant/rules/AI Rules.md](.aiassistant/rules/AI%20Rules.md) | Конвенции для JetBrains AI Assistant          |
+
+## Architecture
+
+Трёхслойная архитектура. Код в одном проекте, границы между слоями
+проверяются ESLint (`no-restricted-imports`).
+
+### Слои
+
+| Слой   | Папка         | Может импортировать      | Не может                         |
+| ------ | ------------- | ------------------------ | -------------------------------- |
+| Ядро   | `src/core`    | только `src/core`        | `schemas`, `llm`, `server`, `ui` |
+| Схемы  | `src/schemas` | только `src/schemas`     | `core`, `llm`, `server`, `ui`    |
+| LLM    | `src/llm`     | `core`, `schemas`        | `server`, `ui`                   |
+| Сервер | `src/server`  | `core`, `schemas`, `llm` | `ui`                             |
+| UI     | `src/ui`      | `schemas`, HTTP API      | `core`, `llm`                    |
+
+### Детали
+
+- **`src/core`** — детерминированное ядро. Чистый TypeScript, ноль
+  зависимостей от Node, HTTP, LLM. Тестируется в изоляции.
+- **`src/schemas`** — Zod-схемы. Контракт для `facts.json`, `claims.json`,
+  `audit.json`, `validation.json`, structured output LLM, API.
+- **`src/llm`** — обёртка над opencode SDK. Session, structured output,
+  чекпоинты, retry.
+- **`src/server`** — Fastify. Роуты, статика, файловое хранилище.
+- **`src/ui`** — React. Только типы из `schemas` и HTTP-запросы к серверу.
+
+### Структура
+
+```text
+src/
+  core/
+    dates.ts           ← включительный подсчёт, полуоткрытые интервалы
+    experience.ts      ← наивная сумма + объединение интервалов
+    numbers.ts         ← нормализация, валюта из контекста
+    skills.ts          ← per-role блок-листы
+    ats.ts             ← ключевые слова в контексте
+    verification.ts    ← слой 1 верификации
+  schemas/
+    facts.ts
+    evidence.ts
+    claims.ts
+    audit.ts
+    validation.ts
+    stage-state.ts
+  llm/
+    client.ts
+    session.ts
+    structured-output.ts
+    checkpoint.ts
+  server/
+    index.ts
+    routes/
+    storage/
+  ui/
+    components/
+    pages/
+    main.tsx
+```
+
+### Данные
+
+```text
+data/
+  facts.json          ← источник правды
+  evidence/<id>.json  ← карточки доказательств
+  audit.json          ← производное: противоречия, вопросы, роли, ATS
+  claims.json         ← этап 2: утверждения с цитатами
+  files.json          ← этап 1: инвентарь и классификация
+  validation.json     ← этап 8: верификация
+  stage-state.json    ← статусы + facts_hash каждого документа
+  resumes/*.json      ← сгенерированные версии
+  logs/model-responses.log  ← с ротацией, без содержимого резюме
+```
+
+### Переход на монорепо (когда наступит триггер)
+
+Границы слоёв уже соблюдаются. Переход к `packages/core` + `apps/web`
+сводится к переносу папок и замене импортов `./core` → `@resume-audit/core`.
+
+Триггеры для перехода:
+
+1. Появился CLI, которому нужен `core` без `ui`.
+2. Появился второй потребитель ядра (бот, API, публичная библиотека).
+3. Команда выросла до 2+ разработчиков.
+4. Понадобилось версионировать `core` отдельно.
+5. Билд стал медленным из-за пересборки при правке UI.
+
+## Contributing
+
+1. `git checkout -b feat/your-feature`
+2. `git commit -m "feat: add your feature"`
+3. `git push origin feat/your-feature`
 
 ## Conventions
 
-См. `.aiassistant/rules/AI Rules.md`: JSDoc, strict TS, 120 chars, Conventional Commits,
-anti-monolith (250 lines).
+Стиль кода: 2 пробела, точка с запятой, двойные кавычки, trailing commas,
+JSDoc (`@param`, `@return`), `const`/`let`. См. `.aiassistant/rules/AI Rules.md`.
+
+Ключевые конвенции проекта (см. [AGENTS.md](AGENTS.md)):
+
+- **Даты**: включительный подсчёт месяцев. `present` = последний завершённый
+  месяц относительно `audit_date`.
+- **Слияние интервалов**: полуоткрытые интервалы `[s, e+1)`. Смежность
+  (`prev.end == next.start`) — нормальная последовательность, не пересечение.
+- **Стаж**: считается двумя способами. Наивная сумма (конвенция hh.ru) —
+  в резюме, объединение интервалов (истина) — в отчёте.
+- **Числа**: все в резюме должны быть подмножеством `facts.json` для целевой
+  роли по полю `roles`.
+- **Утверждение без цитаты** — удаляется кодом.
+- **`facts.json`** — источник правды. Производные (`audit.json`,
+  `validation.json`) не хранятся в нём.
+- **Верификация**: слой 1 (код) не может быть обойдён слоем 2 (LLM).
+- **Экспорт** — fail-closed.
+- **Файлы**: лимит 250 строк (проверяется `check:file-length` в pre-commit).
+
+## Limitations
+
+1. Приложение **не знает** алгоритмов ранжирования hh.ru и не делает вид,
+   что знает.
+2. Качество текстовых оценок зависит от модели. Вся арифметика и проверки —
+   в коде. На подключении более сильной модели вырастет только качество
+   оценок, не расчёты.
+3. **Конфиденциальность.** Резюме — персональные данные. Тексты утверждений
+   и черновики резюме передаются в opencode server и далее в провайдера
+   модели. `model-responses.log` содержит персональные данные и не должен
+   попадать в систему контроля версий.
+4. Тексты вакансий не обязательны. Без них ключевые слова строятся
+   на гипотезе и помечаются в отчёте.
+5. Приложение не проверяет факты через работодателей и не может этого делать.
+6. Ни одно сгенерированное резюме не публикуется без верификации
+   и заполненных карточек доказательств.
+7. Транзитивная уязвимость в `braces` (dev-only, stylelint) —
+   см. [SECURITY.md](SECURITY.md#known-limitations).
 
 ## License
 

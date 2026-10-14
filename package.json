@@ -9,7 +9,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.3.0"
   },
-  "description": "WebStorm template with ESLint, Prettier, Stylelint, markdownlint, TypeScript, Husky, and AI rules",
+  "description": "Local web application for strict resume audit for hh.ru",
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.0",
@@ -53,7 +53,7 @@
     "*.{css,scss}": "stylelint --fix",
     "*.md": "markdownlint --fix --ignore node_modules"
   },
-  "name": "webstorm-config",
+  "name": "resume-audit",
   "scripts": {
     "lint": "eslint . --max-warnings=0",
     "lint:css": "stylelint \"**/*.{css,scss}\" --allow-empty-input",
