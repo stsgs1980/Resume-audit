@@ -36,3 +36,10 @@
 *.woff binary
 *.woff2 binary
 *.pdf binary
+
+# Files without extension (dotfiles)
+.prettierrc text eol=lf
+.prettierignore text eol=lf
+.editorconfig text eol=lf
+.gitattributes text eol=lf
+.nvmrc text eol=lf
