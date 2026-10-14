@@ -46,13 +46,7 @@
       "kanban"
     ],
     "sales": [],
-    "salesops": [
-      "прогнозирование продаж",
-      "forecast",
-      "pipeline coverage",
-      "SLA",
-      "data governance"
-    ],
+    "salesops": ["прогнозирование продаж", "forecast", "pipeline coverage", "SLA", "data governance"],
     "aipo": [
       "roadmap",
       "бэклог",

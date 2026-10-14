@@ -58,9 +58,7 @@ describe("extractNumbers: исключения", () => {
 
 describe("verifySkills", () => {
   it("навык с чужой ролью -> в списке ошибок", () => {
-    expect(verifySkills(["SQL"], [{ skill: "SQL", roles: ["salesops"] }], "sales")).toEqual([
-      "SQL",
-    ]);
+    expect(verifySkills(["SQL"], [{ skill: "SQL", roles: ["salesops"] }], "sales")).toEqual(["SQL"]);
   });
 
   it("навык с нужной ролью -> ошибок нет", () => {

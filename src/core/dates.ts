@@ -123,10 +123,7 @@ export function toHalfOpen(interval: InclusiveInterval): HalfOpenInterval {
  * @returns сумма месяцев
  */
 export function naiveSum(intervals: InclusiveInterval[]): number {
-  return intervals.reduce(
-    (sum, interval) => sum + monthsInclusive(interval.start, interval.end),
-    0,
-  );
+  return intervals.reduce((sum, interval) => sum + monthsInclusive(interval.start, interval.end), 0);
 }
 
 /**
