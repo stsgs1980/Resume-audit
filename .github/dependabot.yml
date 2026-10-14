@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      # Minor and patch updates in one PR; majors stay separate.
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # ESLint 10 is blocked by eslint-plugin-react and eslint-plugin-jsx-a11y.
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+      # TypeScript 6+ is blocked by typescript-eslint.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # Newer majors require a newer Node than engines allows.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3

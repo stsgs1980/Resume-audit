@@ -1,0 +1,40 @@
+{
+  "extends": ["stylelint-config-standard", "stylelint-config-standard-scss"],
+  "overrides": [
+    {
+      "files": ["**/*.scss"],
+      "customSyntax": "postcss-scss",
+      "rules": {
+        "at-rule-no-unknown": null
+      }
+    }
+  ],
+  "rules": {
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": [
+          "tailwind",
+          "apply",
+          "layer",
+          "screen",
+          "container",
+          "variants",
+          "responsive",
+          "theme",
+          "custom-variant",
+          "custom-media",
+          "utility",
+          "source",
+          "plugin",
+          "config"
+        ]
+      }
+    ],
+    "import-notation": null,
+    "declaration-block-no-redundant-longhand-properties": null,
+    "lightness-notation": null,
+    "hue-degree-notation": null,
+    "at-rule-prelude-no-invalid": null
+  }
+}

@@ -1,0 +1,34 @@
+<templateSet group="React">
+  <template name="rafce" value="import type { ReactNode } from &quot;react&quot;;&#10;&#10;interface $NAME$Props {&#10;  children?: ReactNode;&#10;}&#10;&#10;/**&#10; * $NAME$ component.&#10; *&#10; * @param props - component props&#10; * @param props.children - component children&#10; * @returns JSX element&#10; */&#10;export const $NAME$ = ({ children }: $NAME$Props) => {&#10;  return &lt;div&gt;{children}&lt;/div&gt;;&#10;};&#10;&#10;export default $NAME$;" description="React Arrow Function Component" toReformat="false" toShortenFQNames="true">
+    <variable name="NAME" expression="" defaultValue="" alwaysStopAt="true" />
+  </template>
+  <template name="useState" value="const [$NAME$, set$NAME$] = useState($INIT$);" description="React useState" toReformat="false" toShortenFQNames="true">
+    <variable name="NAME" expression="" defaultValue="" alwaysStopAt="true" />
+    <variable name="INIT" expression="" defaultValue="" alwaysStopAt="true" />
+  </template>
+  <template name="useEffect" value="useEffect(() => {&#10;  $END$&#10;}, [$DEPS$]);" description="React useEffect" toReformat="false" toShortenFQNames="true">
+    <variable name="DEPS" expression="" defaultValue="" alwaysStopAt="true" />
+  </template>
+  <template name="useCallback" value="const $NAME$ = useCallback(($PARAMS$) => {&#10;  $END$&#10;}, [$DEPS$]);" description="React useCallback" toReformat="false" toShortenFQNames="true">
+    <variable name="NAME" expression="" defaultValue="" alwaysStopAt="true" />
+    <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true" />
+    <variable name="DEPS" expression="" defaultValue="" alwaysStopAt="true" />
+  </template>
+  <template name="useMemo" value="const $NAME$ = useMemo(() => {&#10;  $END$&#10;}, [$DEPS$]);" description="React useMemo" toReformat="false" toShortenFQNames="true">
+    <variable name="NAME" expression="" defaultValue="" alwaysStopAt="true" />
+    <variable name="DEPS" expression="" defaultValue="" alwaysStopAt="true" />
+  </template>
+  <template name="useRef" value="const $NAME$ = useRef($INIT$);" description="React useRef" toReformat="false" toShortenFQNames="true">
+    <variable name="NAME" expression="" defaultValue="" alwaysStopAt="true" />
+    <variable name="INIT" expression="" defaultValue="null" alwaysStopAt="true" />
+  </template>
+  <template name="useContext" value="const $NAME$ = useContext($CONTEXT$);" description="React useContext" toReformat="false" toShortenFQNames="true">
+    <variable name="NAME" expression="" defaultValue="" alwaysStopAt="true" />
+    <variable name="CONTEXT" expression="" defaultValue="" alwaysStopAt="true" />
+  </template>
+  <template name="useReducer" value="const [$STATE$, dispatch] = useReducer($REDUCER$, $INIT$);" description="React useReducer" toReformat="false" toShortenFQNames="true">
+    <variable name="STATE" expression="" defaultValue="" alwaysStopAt="true" />
+    <variable name="REDUCER" expression="" defaultValue="" alwaysStopAt="true" />
+    <variable name="INIT" expression="" defaultValue="{}" alwaysStopAt="true" />
+  </template>
+</templateSet>

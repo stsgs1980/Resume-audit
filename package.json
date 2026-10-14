@@ -1,0 +1,82 @@
+{
+  "author": "stsgs1980",
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.3.0"
+  },
+  "description": "WebStorm template with ESLint, Prettier, Stylelint, markdownlint, TypeScript, Husky, and AI rules",
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.0",
+    "@eslint/markdown": "8.0.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.3.0",
+    "@typescript-eslint/parser": "^8.68.0",
+    "@vitest/coverage-v8": "^5.0.4",
+    "conventional-changelog-angular": "^9.4.0",
+    "conventional-changelog-cli": "^5.0.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-jsdoc": "^65.2.2",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "markdownlint-cli": "^0.49.1",
+    "prettier": "^3.9.9",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "stylelint": "^17.14.1",
+    "stylelint-config-standard": "^40.0.0",
+    "stylelint-config-standard-scss": "^17.0.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.4"
+  },
+  "keywords": [
+    "webstorm",
+    "eslint",
+    "prettier",
+    "typescript",
+    "husky",
+    "template"
+  ],
+  "license": "MIT",
+  "lint-staged": {
+    "*.{js,ts,jsx,tsx,mjs,cjs,mts,cts,json,html,md,vue,svelte,astro,scss,css,less,yaml}": "prettier --write",
+    "*.{js,ts,jsx,tsx,mjs,cjs,mts,cts}": "eslint --fix",
+    "*.{css,scss}": "stylelint --fix",
+    "*.md": "markdownlint --fix --ignore node_modules"
+  },
+  "name": "webstorm-config",
+  "scripts": {
+    "lint": "eslint . --max-warnings=0",
+    "lint:css": "stylelint \"**/*.{css,scss}\" --allow-empty-input",
+    "lint:md": "markdownlint \"**/*.md\" --ignore node_modules",
+    "check:file-length": "node scripts/check-file-length.ts --all",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "prepare": "husky",
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
+  },
+  "engines": {
+    "node": ">=24.15.0",
+    "npm": ">=11.0.0"
+  },
+  "type": "module",
+  "overrides": {
+    "katex": "^0.19.0",
+    "smol-toml": "^1.9.1",
+    "js-yaml": "^5.4.3"
+  },
+  "version": "1.0.0"
+}

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JsonSchemaMappingsProjectConfiguration">
+    <state>
+      <map>
+        <entry key="Markdownlint">
+          <value>
+            <SchemaInfo>
+              <option name="name" value="Markdownlint" />
+              <option name="relativePathToSchema" value="https://raw.githubusercontent.com/DavidAnson/markdownlint/main/schema/markdownlint-config-schema.json" />
+              <option name="schemaVersion" value="JSON Schema 2020.12" />
+              <option name="applicationDefined" value="true" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value=".markdownlint.json" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+      </map>
+    </state>
+  </component>
+</project>

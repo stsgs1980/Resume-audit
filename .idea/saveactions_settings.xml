@@ -1,0 +1,17 @@
+<application>
+  <component name="SaveActionsConfiguration">
+    <option name="active" value="true" />
+    <option name="actions">
+      <set>
+        <option value="reformat" />
+        <option value="optimizeImports" />
+      </set>
+    </option>
+    <option name="inclusions">
+      <set />
+    </option>
+    <option name="exclusions">
+      <set />
+    </option>
+  </component>
+</application>

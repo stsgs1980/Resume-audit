@@ -1,0 +1,14 @@
+<templateSet group="Utilities">
+  <template name="try" value="try {$END$} catch ($ERROR$) {$CATCH$}" description="try-catch block" toReformat="false" toShortenFQNames="true">
+    <variable name="ERROR" expression="" defaultValue="error" alwaysStopAt="true" />
+    <variable name="CATCH" expression="" defaultValue="" alwaysStopAt="true" />
+  </template>
+  <template name="for" value="for (let $I$ = 0; $I$ &lt; $LENGTH$; $I$++) {$END$}" description="for loop" toReformat="false" toShortenFQNames="true">
+    <variable name="I" expression="" defaultValue="i" alwaysStopAt="true" />
+    <variable name="LENGTH" expression="" defaultValue="" alwaysStopAt="true" />
+  </template>
+  <template name="forEach" value="$ARRAY$.forEach(($ITEM$) => {$END$});" description="forEach loop" toReformat="false" toShortenFQNames="true">
+    <variable name="ARRAY" expression="" defaultValue="" alwaysStopAt="true" />
+    <variable name="ITEM" expression="" defaultValue="item" alwaysStopAt="true" />
+  </template>
+</templateSet>

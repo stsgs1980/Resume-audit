@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Generate CHANGELOG on main and block if changed
+bash scripts/generate-changelog.sh

@@ -1,0 +1,16 @@
+<templateSet group="Testing">
+  <template name="describe" value="describe(&quot;$NAME$&quot;, () => {$END$});" description="Vitest describe" toReformat="false" toShortenFQNames="true">
+    <variable name="NAME" expression="" defaultValue="" alwaysStopAt="true" />
+  </template>
+  <template name="it" value="it(&quot;should $DESC$&quot;, () => {$END$});" description="Vitest it" toReformat="false" toShortenFQNames="true">
+    <variable name="DESC" expression="" defaultValue="" alwaysStopAt="true" />
+  </template>
+  <template name="test" value="test(&quot;$NAME$&quot;, () => {$END$});" description="Vitest test" toReformat="false" toShortenFQNames="true">
+    <variable name="NAME" expression="" defaultValue="" alwaysStopAt="true" />
+  </template>
+  <template name="expect" value="expect($VALUE$).$METHOD$($EXPECTED$);" description="Vitest expect" toReformat="false" toShortenFQNames="true">
+    <variable name="VALUE" expression="" defaultValue="" alwaysStopAt="true" />
+    <variable name="METHOD" expression="complete(&quot;toBe,toEqual,toBeTruthy,toBeFalsy,toContain,toHaveLength&quot;)" defaultValue="toBe" alwaysStopAt="true" />
+    <variable name="EXPECTED" expression="" defaultValue="" alwaysStopAt="true" />
+  </template>
+</templateSet>

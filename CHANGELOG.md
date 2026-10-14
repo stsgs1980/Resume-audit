@@ -1,0 +1,46 @@
+<!-- markdownlint-disable -->
+
+# 1.0.0 (2026-10-12)
+
+### Bug Fixes
+
+- accept IDE-canonical code style files (USE_PER_PROJECT_SETTINGS) ([692e37c](https://github.com/stsgs1980/webstorm-config/commit/692e37cd35948273ec1f977e609ceb54444dbde0))
+- add passWithNoTests to vitest config for CI ([b83d3a2](https://github.com/stsgs1980/webstorm-config/commit/b83d3a2e3e1055d4e8418d895c9c47a6af22140e))
+- audit package 1 - gitignore, format:check, markdownlint, live templates, eslint ignores ([6eac2af](https://github.com/stsgs1980/webstorm-config/commit/6eac2aff03e4a3e647ae50d98c0b63cc381b576b))
+- convert asterisk to dash in changelog generation ([56aa7a8](https://github.com/stsgs1980/webstorm-config/commit/56aa7a86b8d826ef86096dd309c552553c056540))
+- convert markdown-snippets.js to .ts with proper types ([ba7ad1f](https://github.com/stsgs1980/webstorm-config/commit/ba7ad1f0eedbca84707bf681d783d5543ec05363))
+- drop dead .codex/config.toml mapping, whitelist jsonSchemas.xml ([6edfc6c](https://github.com/stsgs1980/webstorm-config/commit/6edfc6cf6a74eac39cb597325ab2990a7776697a))
+- explicit String type in check-file-length.mjs ([0241e01](https://github.com/stsgs1980/webstorm-config/commit/0241e01b69c94a5abad18f48f87e5c4f63f51393))
+- extract functions before export to satisfy WebStorm static analysis ([dfc76dd](https://github.com/stsgs1980/webstorm-config/commit/dfc76ddfb59b24f70b810ded69cd74f7f330b2c7))
+- fix long lines and structure in eslint-rules files ([ac522be](https://github.com/stsgs1980/webstorm-config/commit/ac522beb42faac080a55e3b38bcd6a932c16b18f))
+- format changelog with prettier ([82120fd](https://github.com/stsgs1980/webstorm-config/commit/82120fdbc7a1ae64166fa547d1574d3f78704032))
+- normalize blank lines in changelog ([5a87010](https://github.com/stsgs1980/webstorm-config/commit/5a87010ba6740de49161639da5cdc8dea55bab33))
+- override js-yaml past vulnerable range ([a7882df](https://github.com/stsgs1980/webstorm-config/commit/a7882df687aea53a3628a42dcce0f1a120e1830d))
+- override katex and smol-toml past vulnerable ranges ([c2cb1ae](https://github.com/stsgs1980/webstorm-config/commit/c2cb1ae4a1a83885a9aafb20f8bf4120f707c925))
+- pin conventional-changelog-angular to ^8 (v9 needs new writer, migration later) ([8196c1a](https://github.com/stsgs1980/webstorm-config/commit/8196c1ad757e793bb3ce40a820d66734a4970cca))
+- pin shared inspection profile (USE_PROJECT_PROFILE=true) ([94bf0d1](https://github.com/stsgs1980/webstorm-config/commit/94bf0d1d74e7cd1f0ab397f90bcd107bafd33b2b))
+- prevent CHANGELOG duplication and add pre-push comment ([2b0ea36](https://github.com/stsgs1980/webstorm-config/commit/2b0ea366ac9664a5fd6203897a3ebb5327bef3ba))
+- remove broken sed normalization ([8cadfca](https://github.com/stsgs1980/webstorm-config/commit/8cadfca1a4a87ee1abe93922ff9e585b8002ed85))
+- remove CHANGELOG.md exclusions, add markdownlint-disable comment ([ef6a671](https://github.com/stsgs1980/webstorm-config/commit/ef6a671b147cb3c4bdc30d7bf194d906ced45bc6))
+- rename TMPFILE to TEMP_FILE for clarity ([3ccc4b5](https://github.com/stsgs1980/webstorm-config/commit/3ccc4b51bd66f8a01dbc52027cf73e834f913303))
+- restore .js with proper JSDoc, remove broken .d.ts ([7b02afd](https://github.com/stsgs1980/webstorm-config/commit/7b02afd8ec8c3e889a02c084f7f7b05b601b06d9))
+- set MD013 line_length=120 per AI Rules.md ([64000b8](https://github.com/stsgs1980/webstorm-config/commit/64000b89adf32024d6319743a001857b4208d0bb))
+- suppress WebStorm false positive for @eslint/markdown import ([d7d237a](https://github.com/stsgs1980/webstorm-config/commit/d7d237ab7141c674c1da118c50ec506aada94189))
+- suppress WebStorm false positives in markdown-snippets.js ([ab1f233](https://github.com/stsgs1980/webstorm-config/commit/ab1f233243a9db655603591eae25b7e45c08c76e))
+- sync .markdownlint-cli.json with .markdownlint.json, document markdown rules ([afb2f04](https://github.com/stsgs1980/webstorm-config/commit/afb2f0424d51e4aaf9edd229544adb9fc1bf4b32))
+- typo 'codestyle' -> 'code style' in docs/webstorm.md and AI Rules ([1528049](https://github.com/stsgs1980/webstorm-config/commit/1528049bbc17e11bf796a7162acbf391f0141018))
+- whitelist prettier/vcs/modules/iml, extend iml excludes and prettier pattern ([9b087eb](https://github.com/stsgs1980/webstorm-config/commit/9b087ebd9871582a54196139ef20a81fd929c76b))
+
+### Features
+
+- add anti-monolith script ([4b31ecf](https://github.com/stsgs1980/webstorm-config/commit/4b31ecf6e7a01e1e12d467a7b2b025b604ed1e04))
+- add Live Templates, File Templates, and Copyright ([cdf117c](https://github.com/stsgs1980/webstorm-config/commit/cdf117cea4e9d3e4264253392230d8c2e33301d6))
+- add pre-push changelog guard hook ([29c6898](https://github.com/stsgs1980/webstorm-config/commit/29c689866fa356bcead688e030d763022617c53b))
+- add project AI rules and cleanup ([7cafc36](https://github.com/stsgs1980/webstorm-config/commit/7cafc365bac4d16d968b5e78f025964b33c05056))
+- add test variable ([a21dd4f](https://github.com/stsgs1980/webstorm-config/commit/a21dd4f85aab5986116f3ba5c9cdbdb2797440a3))
+- add Vitest, fix dependency versions, update docs ([a5851ef](https://github.com/stsgs1980/webstorm-config/commit/a5851ef87f55e1cc8902e4e1f477b8ea269ffbb1))
+- audit package 2 - typescript-eslint recommended, no-var, jsdoc error, typecheck in CI ([644bf7a](https://github.com/stsgs1980/webstorm-config/commit/644bf7adba7fde18e2c77be30bad205ac42c980e))
+- enable TypeScriptExplicitMemberType to match AI Rules ([3cbdfda](https://github.com/stsgs1980/webstorm-config/commit/3cbdfda897a971d4a7beeb42ef4729b76cf29f07))
+- make linters Tailwind v4-aware and document setup ([0f067a7](https://github.com/stsgs1980/webstorm-config/commit/0f067a71af84e0c9338f47918f3120b57b5f2ee6))
+- package 4 - tailwind v4 stylelint, scss support, wider lint-staged, vitest 5 ([0b9531a](https://github.com/stsgs1980/webstorm-config/commit/0b9531a8fee075f75a775036e31fbc0ce7395b01))
+- strictness leftovers - check-file-length in CI, RuleTester tests, drop dead md rules ([c57ea4a](https://github.com/stsgs1980/webstorm-config/commit/c57ea4aec18d8847fabd142a390506e4e3a73b7d))

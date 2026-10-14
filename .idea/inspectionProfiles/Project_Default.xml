@@ -1,0 +1,41 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="CyclomaticComplexityJS" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="m_limit" value="15" />
+    </inspection_tool>
+    <inspection_tool class="ES6ShorthandObjectProperty" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="Eslint" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="FileLength" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="limit" value="250" />
+    </inspection_tool>
+    <inspection_tool class="LongLine" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="MethodCount" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="m_limit" value="25" />
+      <option name="m_ignoreGettersAndSetters" value="true" />
+    </inspection_tool>
+    <inspection_tool class="MissingOverrideAnnotation" enabled="false" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="NestedFunctionDepthJS" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="m_limit" value="4" />
+    </inspection_tool>
+    <inspection_tool class="OverlyLongFunctionJS" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="m_limit" value="50" />
+    </inspection_tool>
+    <inspection_tool class="ParametersPerFunction" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="m_limit" value="5" />
+    </inspection_tool>
+    <inspection_tool class="StatementsPerFunctionJS" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="m_limit" value="30" />
+    </inspection_tool>
+    <inspection_tool class="Stylelint" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="TrailingSpacesInProperty" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="TypeScriptExplicitMemberType" enabled="true" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="TypeScriptMissingAugmentationImport" enabled="true" level="WEAK WARNING" enabled_by_default="true" />
+    <inspection_tool class="TypeScriptStrictTypeCheckings" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="NoFloatingPromisesJS" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="UnusedImports" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="ConsistentTypeImports" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="JSDocMissingParam" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="JsonSchemaValidation" enabled="true" level="WARNING" enabled_by_default="true" />
+  </profile>
+</component>

@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+out/
+.next/
+.nuxt/
+.svelte-kit/
+.astro/
+.output/
+.vite/
+.cache/
+
+# Test coverage
+coverage/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Husky
+.husky/_/
+
+# React Buddy
+/dev/
+
+# IDE (WebStorm / IntelliJ)
+.idea/*
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+!.idea/watcherTasks.xml
+!.idea/liveTemplates/
+!.idea/fileTemplates/
+!.idea/saveactions_settings.xml
+!.idea/jsonSchemas.xml
+!.idea/prettier.xml
+!.idea/vcs.xml
+!.idea/modules.xml
+!.idea/webstorm-config.iml
+
+# OpenCode
+.agents/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript build info
+*.tsbuildinfo

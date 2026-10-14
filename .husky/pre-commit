@@ -1,0 +1,5 @@
+# Запуск форматирования и линтинга через lint-staged
+npx lint-staged
+
+# Запуск проверки на максимальный размер файла (anti-monolith)
+node scripts/check-file-length.ts

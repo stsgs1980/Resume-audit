@@ -1,0 +1,38 @@
+# Enforce LF line endings for shell scripts
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Enforce LF for other scripts
+*.py text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+
+# Enforce LF for config files
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.xml text eol=lf
+
+# Enforce LF for git hooks
+.husky/* text eol=lf
+
+# Keep CRLF for Windows-specific files
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
