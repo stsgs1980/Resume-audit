@@ -28,6 +28,7 @@
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Getting Started](#getting-started)
+- [Статус разработки](#статус-разработки)
 - [Scripts](#scripts)
 - [Docs](#docs)
 - [Architecture](#architecture)
@@ -123,20 +124,22 @@ npm run dev
 
 Открыть `http://localhost:4174`.
 
-### CHANGELOG.md (важно для шаблона)
+## Статус разработки
 
-При клонировании шаблона `CHANGELOG.md` содержит историю **webstorm-config**,
-а не этого проекта.
+Проект в активной разработке. Закрыта Фаза 0 (спецификация).
 
-```bash
-rm CHANGELOG.md
-git add CHANGELOG.md
-git commit -m "chore: reset changelog for new project"
-```
+| Фаза               | Статус |
+| ------------------ | ------ |
+| 0. Спецификация    | [OK]   |
+| 1. Ядро            | [TODO] |
+| 2. Схемы данных    | [TODO] |
+| 3. LLM-слой        | [TODO] |
+| 4. Этапы конвейера | [TODO] |
+| 5. UI              | [TODO] |
+| 6. Приёмка         | [TODO] |
 
-Спецификация проекта —
-[docs/superpowers/specs/SPEC.md](docs/superpowers/specs/SPEC.md).
-План сборки — [docs/superpowers/plans/BUILD.md](docs/superpowers/plans/BUILD.md).
+Что должно быть построено — [SPEC.md](docs/superpowers/specs/SPEC.md).
+Как строить по шагам — [BUILD.md](docs/superpowers/plans/BUILD.md).
 
 ## Scripts
 

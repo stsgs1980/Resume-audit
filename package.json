@@ -47,12 +47,13 @@
     "vitest": "^5.0.4"
   },
   "keywords": [
-    "webstorm",
-    "eslint",
-    "prettier",
+    "resume-audit",
+    "hh-ru",
+    "ats",
+    "fact-checking",
+    "llm-verification",
     "typescript",
-    "husky",
-    "template"
+    "zod"
   ],
   "license": "MIT",
   "lint-staged": {
