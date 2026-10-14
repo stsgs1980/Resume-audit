@@ -54,3 +54,9 @@ npm-debug.log*
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Superpowers (opencode plugin)
+.superpowers/
+
+# Data (personal, not committed)
+data/
