@@ -7,7 +7,7 @@
 
 Фундамент всего расчёта стажа. Ошибка здесь ломает все производные цифры.
 
-```typescript
+```text
 function monthsInclusive(start: YearMonth, end: YearMonth): number {
   return (end.year - start.year) * 12 + (end.month - start.month) + 1;
 }
@@ -52,7 +52,7 @@ function monthsInclusive(start: YearMonth, end: YearMonth): number {
 
 Стаж считается двумя способами. Оба показываются пользователю.
 
-```typescript
+```text
 // Наивная сумма — воспроизводит конвенцию hh.ru
 const naiveMonths = sum(jobs.map((j) => monthsInclusive(j.start, j.endResolved)));
 
