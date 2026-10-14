@@ -134,11 +134,6 @@ git add CHANGELOG.md
 git commit -m "chore: reset changelog for new project"
 ```
 
-Первый запуск в новом проекте из шаблона —
-[docs/getting-started.md](docs/getting-started.md).
-
-IDE: [docs/webstorm.md](docs/webstorm.md).
-
 Спецификация проекта —
 [docs/superpowers/specs/SPEC.md](docs/superpowers/specs/SPEC.md).
 План сборки — [docs/superpowers/plans/BUILD.md](docs/superpowers/plans/BUILD.md).
@@ -167,7 +162,6 @@ IDE: [docs/webstorm.md](docs/webstorm.md).
 | ------------------------------------------------------------------ | --------------------------------------------- |
 | [SPEC.md](docs/superpowers/specs/SPEC.md)                          | Спецификация системы: схемы, конвенции, этапы |
 | [BUILD.md](docs/superpowers/plans/BUILD.md)                        | План сборки: порядок, гейты, тесты            |
-| [getting-started.md](docs/getting-started.md)                      | Фреймворк, `src/`, Tailwind, проверка         |
 | [webstorm.md](docs/webstorm.md)                                    | Настройка WebStorm, ACP, opencode             |
 | [testing.md](docs/testing.md)                                      | Vitest, `jsdom`, Testing Library              |
 | [markdown.md](docs/markdown.md)                                    | Правила оформления `.md`                      |
