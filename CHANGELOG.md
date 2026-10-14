@@ -11,4 +11,5 @@
 - add layered architecture skeleton with eslint boundaries ([035caec](https://github.com/stsgs1980/Resume-audit/commit/035caec7fbdc9c2349642e09c68fc8a43f21196d))
 - add Vite + React entry point and Fastify dependencies ([1d23c5f](https://github.com/stsgs1980/Resume-audit/commit/1d23c5f0e35136ce6dd8c3d349a2eb3760f59296))
 - **core:** add inclusive date arithmetic and interval union ([774c72d](https://github.com/stsgs1980/Resume-audit/commit/774c72de3c5f933b25776b9a405e3f40c97fd8c1))
+- **core:** add number normalization and cross-check ([abe4853](https://github.com/stsgs1980/Resume-audit/commit/abe4853811d4f7942407d7178346315a8ea423d0))
 - **core:** add present resolution, gaps and overlaps ([7eded4a](https://github.com/stsgs1980/Resume-audit/commit/7eded4ae6e61274bb5f96948125ad3f0106ed988))
