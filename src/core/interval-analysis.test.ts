@@ -61,6 +61,34 @@ describe("findGaps", () => {
 
     expect(findGaps(intervals, 3)).toEqual([]);
   });
+
+  it("вложенный интервал не создаёт ложный разрыв — один gap 5 мес", () => {
+    const intervals = [
+      {
+        id: "jobA",
+        start: { year: 2020, month: 1 },
+        end: { year: 2021, month: 12 },
+        overlapGroup: null,
+      },
+      {
+        id: "jobB",
+        start: { year: 2020, month: 6 },
+        end: { year: 2020, month: 12 },
+        overlapGroup: null,
+      },
+      {
+        id: "jobC",
+        start: { year: 2022, month: 6 },
+        end: { year: 2023, month: 1 },
+        overlapGroup: null,
+      },
+    ];
+
+    const gaps = findGaps(intervals, 3);
+
+    expect(gaps).toHaveLength(1);
+    expect(gaps[0]?.months).toBe(5);
+  });
 });
 
 describe("findOverlaps", () => {

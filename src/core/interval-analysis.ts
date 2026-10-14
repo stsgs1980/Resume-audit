@@ -25,27 +25,40 @@ export function findGaps(intervals: ResolvedInterval[], threshold = 3): Gap[] {
   const sorted = [...intervals].sort((a, b) => toMonths(a.start) - toMonths(b.start));
 
   const gaps: Gap[] = [];
+  const first = sorted[0];
+
+  if (!first) {
+    return [];
+  }
+
+  let maxEnd = toMonths(first.end);
+  let maxJob = first;
 
   for (let i = 1; i < sorted.length; i += 1) {
-    const prev = sorted[i - 1];
     const next = sorted[i];
 
-    if (!prev || !next) {
+    if (!next) {
       continue;
     }
 
-    const prevEnd = toMonths(prev.end);
     const nextStart = toMonths(next.start);
-    const gapMonths = nextStart - prevEnd - 1;
+    const gapMonths = nextStart - maxEnd - 1;
 
     if (gapMonths > threshold) {
       gaps.push({
-        fromJobId: prev.id,
+        fromJobId: maxJob.id,
         toJobId: next.id,
         months: gapMonths,
-        fromEnd: prev.end,
+        fromEnd: maxJob.end,
         toStart: next.start,
       });
+    }
+
+    const currentEnd = toMonths(next.end);
+
+    if (currentEnd > maxEnd) {
+      maxEnd = currentEnd;
+      maxJob = next;
     }
   }
 
