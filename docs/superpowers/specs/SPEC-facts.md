@@ -98,12 +98,31 @@ data/
       "source_files": []
     }
   ],
-  "education": [],
-  "languages": [],
-  "confirmed_skills": [],
-  "portfolio_projects": []
+  "education": [
+    {
+      "id": "edu1",
+      "institution": "",
+      "program": "",
+      "start": "YYYY-MM",
+      "end": "YYYY-MM"
+    }
+  ],
+  "languages": [{ "id": "lang1", "name": "", "level": "" }],
+  "confirmed_skills": [{ "id": "sk1", "skill": "", "roles": ["sales"] }],
+  "portfolio_projects": [{ "id": "prj1", "title": "", "description": "", "roles": ["sales"] }]
 }
 ```
+
+Источник правды — `src/schemas/facts.ts`. В Zod описательные поля
+опциональны: `industry`, `parallel_justification`, `team_size`,
+`context`, `actions`, `results`, `source_files` у job;
+`program`, `start`, `end` у education; `level` у language;
+`description`, `roles` у portfolio_projects. `end` у job может быть
+`null` или отсутствовать, когда `is_current: true`.
+`overlap_group` — `string | null`, тоже опционален.
+
+`schema_version: z.literal(1)`. При росте версии — добавить v2
+и migration в `migrations/`.
 
 ## 5. Поле roles
 
@@ -177,15 +196,21 @@ data/
       "quote": "",
       "source_file": "",
       "category": "employment | result | skill | tool | education | language | project | link",
-      "metric_type": "выручка | конверсия | текучесть | объём продаж | товарооборот | команда | затраты | производительность | срок | иное",
+      "metric_type": "свободная строка или null (например выручка, конверсия, иное)",
       "number": null,
-      "currency": null,
+      "currency": "RUB | USD | EUR | null",
       "status": "confirmed | needs_evidence | remove",
       "reason": ""
     }
   ]
 }
 ```
+
+Источник правды — `src/schemas/claims.ts`. Обязательны `id`,
+`statement`, `quote`, `source_file`, `category`, `status`.
+Опциональны `metric_type`, `number`, `currency`, `reason`.
+Утверждение без цитаты удаляется кодом — см. раздел
+про валидацию при сохранении ниже.
 
 ## 10. Схема audit.json
 
@@ -196,13 +221,20 @@ data/
   "facts_hash": "sha256:...",
   "meta_hash": "sha256:...",
   "generated_at": "YYYY-MM-DDTHH:MM:SSZ",
-  "contradictions": [],
-  "open_questions": [],
-  "warnings": [],
-  "roles": [],
-  "ats": {}
+  "contradictions": [{ "id": "c1", "description": "" }],
+  "open_questions": [{ "id": "q1", "question": "", "status": "" }],
+  "warnings": [{ "code": "", "message": "" }],
+  "roles": [{ "role_id": "sales", "verdict": "", "score": 0 }],
+  "ats": { "<keyword>": {} }
 }
 ```
+
+Источник правды — `src/schemas/audit.ts`. `contradiction` — это
+`{ id, description }`; `open_question` — `{ id, question }` плюс
+опциональный `status`; `warning` — `{ code, message }`;
+`roleAssessment` — `{ role_id }` плюс опциональные `verdict`, `score`.
+`ats` — свободная запись `record<string, unknown>`, а не фиксированная
+структура.
 
 ## 11. Схема stage-state.json
 
@@ -236,7 +268,59 @@ data/
 
 Глобальный флаг `allStale` — ошибка проектирования.
 
-## 12. Валидация при сохранении
+Источник правды — `src/schemas/stage-state.ts`. В записи документа
+обязателен только `stale: boolean`; `facts_hash`, `prompt_version`,
+`model_id`, `generated_at` опциональны — поэтому запись вида
+`{ "stale": true }` валидна.
+
+## 12. Схема validation.json
+
+Результат этапа 8. Два вложенных объекта: `layer1` (код)
+и `layer2` (LLM). Верхний уровень строгий: лишние поля отклоняются.
+
+```json
+{
+  "layer1": {
+    "ok": false,
+    "numberErrors": [],
+    "skillErrors": ["SQL"],
+    "forbiddenFound": [],
+    "hedgeErrors": [],
+    "missingFields": [],
+    "shareSumOk": true,
+    "exceptions": ["+7 (926) 065-97-20"]
+  },
+  "layer2": {
+    "checks": [
+      {
+        "number": "4,2 млн",
+        "claim": "рост выручки",
+        "matches_fact": true,
+        "fact_id": "res1",
+        "matches_role": true,
+        "has_hedge": false,
+        "verdict": "ok",
+        "comment": ""
+      }
+    ],
+    "unsupported_skills": ["Go"],
+    "forbidden_words_found": []
+  }
+}
+```
+
+Источник правды — `src/schemas/validation.ts`. Форма `layer1`
+повторяет `VerificationResult` из `src/core/verification.ts`:
+обязателен только `ok: boolean`, остальные списки опциональны.
+Форма `layer2` — из [SPEC-verification.md](SPEC-verification.md),
+раздел 3; `verdict` — `ok | unsupported_number | wrong_role |
+missing_hedge | is_target_metric`.
+
+Долг, не финал: точная форма `layer1` может уточниться при развитии
+верификации (новые виды проверок — новые поля). При изменении —
+обновить схему, этот раздел и миграцию одновременно.
+
+## 13. Валидация при сохранении
 
 Каждое сохранение `facts.json` из интерфейса проходит JSON Schema
 валидацию.
@@ -247,7 +331,7 @@ data/
 - Ошибки валидации показываются у конкретного поля, не общим текстом.
 - Запись атомарная: временный файл, затем `rename`.
 
-## 13. Версионирование артефактов
+## 14. Версионирование артефактов
 
 Каждый артефакт несёт: `schema_version`, `prompt_version`, `model_id`,
 `model_params`, `run_id`, `created_at`, `facts_hash`, `meta_hash`.
