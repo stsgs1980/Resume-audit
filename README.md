@@ -131,7 +131,7 @@ npm run dev
 | Фаза               | Статус |
 | ------------------ | ------ |
 | 0. Спецификация    | [OK]   |
-| 1. Ядро            | [TODO] |
+| 1. Ядро            | [OK]   |
 | 2. Схемы данных    | [TODO] |
 | 3. LLM-слой        | [TODO] |
 | 4. Этапы конвейера | [TODO] |
@@ -154,7 +154,7 @@ npm run dev
 | `npm run lint:md`           | markdownlint                          |
 | `npm run format`            | Prettier (запись)                     |
 | `npm run format:check`      | Prettier (проверка, как в CI)         |
-| `npm test`                  | Vitest (24 теста ядра)                |
+| `npm test`                  | Vitest (92 теста)                     |
 | `npm run test:watch`        | Vitest (watch)                        |
 | `npm run test:coverage`     | Vitest + coverage                     |
 | `npm run check:file-length` | Проверка длины файлов (лимит 250)     |
