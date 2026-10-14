@@ -10,6 +10,8 @@ import {
   detectPlaceholders,
 } from "./detectors";
 
+const ACTOR_PREFIXES = ["клиент", "отдел", "компани", "партнер", "отрасль"];
+
 describe("Test 16: маркеры завышенного AI-позиционирования", () => {
   it('"довёл до production-стандартов" -> непустой массив', () => {
     const found = detectForbiddenWords("довёл до production-стандартов разработки", forbiddenWordsConfig.global);
@@ -35,6 +37,7 @@ describe("Test 19: недоказанная причинность", () => {
         "клиенты увеличили выручку на 30 %",
         causalityConfig.sourceMarkers,
         causalityConfig.causalMarkers,
+        ACTOR_PREFIXES,
       ),
     ).toBe(true);
   });
@@ -45,6 +48,7 @@ describe("Test 19: недоказанная причинность", () => {
         "по данным компании клиенты увеличили выручку на 30 %",
         causalityConfig.sourceMarkers,
         causalityConfig.causalMarkers,
+        ACTOR_PREFIXES,
       ),
     ).toBe(false);
   });
@@ -55,6 +59,7 @@ describe("Test 19: недоказанная причинность", () => {
         "благодаря новой воронке конверсия выросла",
         causalityConfig.sourceMarkers,
         causalityConfig.causalMarkers,
+        ACTOR_PREFIXES,
       ),
     ).toBe(true);
   });
@@ -65,8 +70,20 @@ describe("Test 19: недоказанная причинность", () => {
         "по данным компании благодаря новой воронке конверсия выросла",
         causalityConfig.sourceMarkers,
         causalityConfig.causalMarkers,
+        ACTOR_PREFIXES,
       ),
     ).toBe(false);
+  });
+
+  it("расширяемость: пациент без правки кода -> true", () => {
+    expect(
+      detectCausalityWithoutSource(
+        "пациенты улучшили показатели на 20 %",
+        causalityConfig.sourceMarkers,
+        causalityConfig.causalMarkers,
+        ["пациент"],
+      ),
+    ).toBe(true);
   });
 });
 

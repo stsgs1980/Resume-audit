@@ -7,13 +7,6 @@
  */
 
 /**
- * Префиксы сторон из SPEC-pipeline.md, раздел 3.9: эффект, приписанный
- * другой стороне без маркера источника, — недоказанная причинность.
- * Хранятся уже в foldCase-виде (строчные, без ё).
- */
-const ACTOR_PREFIXES = ["клиент", "отдел", "компани", "партнер", "отрасль"];
-
-/**
  * Строчные + ё->е для матчинга маркеров.
  *
  * @param value - исходная строка
@@ -33,9 +26,7 @@ function foldCase(value: string): string {
 function findSubstrings(text: string, candidates: string[]): string[] {
   const lower = text.toLowerCase();
 
-  return candidates.filter(
-    (candidate) => candidate.length > 0 && lower.includes(candidate.toLowerCase()),
-  );
+  return candidates.filter((candidate) => candidate.length > 0 && lower.includes(candidate.toLowerCase()));
 }
 
 /**
@@ -82,34 +73,32 @@ export function detectForecastMarkers(text: string, markers: string[]): string[]
  *
  * Маркер источника всегда даёт false. Иначе true, если есть явный
  * causalMarker либо числовой эффект, приписанный другой стороне
- * (клиент, отдел, компания, партнёр, отрасль).
+ * (см. actorPrefixes в config/causality.json).
  *
  * @param text - проверяемый текст
  * @param sourceMarkers - маркеры источника из config/causality.json
  * @param causalMarkers - маркеры причинности из config/causality.json
+ * @param actorPrefixes - префиксы сторон из config/causality.json
  * @returns true — причинность без источника, требует проверки
  */
 export function detectCausalityWithoutSource(
   text: string,
   sourceMarkers: string[],
   causalMarkers: string[],
+  actorPrefixes: string[],
 ): boolean {
   const folded = foldCase(text);
-  const hasSource = sourceMarkers.some(
-    (marker) => marker.length > 0 && folded.includes(foldCase(marker)),
-  );
+  const hasSource = sourceMarkers.some((marker) => marker.length > 0 && folded.includes(foldCase(marker)));
 
   if (hasSource) {
     return false;
   }
 
-  const hasCausal = causalMarkers.some(
-    (marker) => marker.length > 0 && folded.includes(foldCase(marker)),
-  );
+  const hasCausal = causalMarkers.some((marker) => marker.length > 0 && folded.includes(foldCase(marker)));
 
   if (hasCausal) {
     return true;
   }
 
-  return /\d/.test(folded) && ACTOR_PREFIXES.some((actor) => folded.includes(actor));
+  return /\d/.test(folded) && actorPrefixes.some((actor) => actor.length > 0 && folded.includes(foldCase(actor)));
 }
