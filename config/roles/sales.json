@@ -1,0 +1,66 @@
+{
+  "id": "sales",
+  "title": "Руководитель отдела продаж",
+  "targets": [
+    { "id": "sales", "title": "Руководитель отдела продаж", "share": 0.7 },
+    { "id": "salesops", "title": "Руководитель Sales Operations", "share": 0.25 },
+    { "id": "aipo", "title": "AI Product Owner", "share": 0.05 }
+  ],
+  "skillsRules": {
+    "always": [
+      "P&L",
+      "ценообразование",
+      "контроль дебиторской задолженности",
+      "маркетинг",
+      "лидогенерация",
+      "SQL",
+      "BI",
+      "Power BI",
+      "Tableau",
+      "Superset",
+      "Looker",
+      "ETL",
+      "data warehouse",
+      "data governance",
+      "RAG",
+      "эмбеддинги",
+      "векторная база данных",
+      "LangChain",
+      "LlamaIndex",
+      "ML",
+      "обучение моделей",
+      "fine-tuning",
+      "LoRA",
+      "MLOps",
+      "data science",
+      "PyTorch",
+      "TensorFlow",
+      "FastAPI",
+      "Pydantic",
+      "Python backend",
+      "amoCRM",
+      "Salesforce",
+      "HubSpot",
+      "Pipedrive",
+      "scrum",
+      "kanban"
+    ],
+    "sales": [],
+    "salesops": [
+      "прогнозирование продаж",
+      "forecast",
+      "pipeline coverage",
+      "SLA",
+      "data governance"
+    ],
+    "aipo": [
+      "roadmap",
+      "бэклог",
+      "backlog",
+      "discovery",
+      "пользовательские интервью",
+      "продуктовая аналитика",
+      "A/B-тестирование"
+    ]
+  }
+}
