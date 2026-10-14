@@ -22,6 +22,17 @@ data/
   logs/               <- model-responses.log
 ```
 
+### 1.1. Мульти-воркспейсы
+
+- Все файлы проекта хранятся в `data/workspaces/<slug>/`:
+  `facts.json`, `evidence/`, `audit.json`, `claims.json`,
+  `validation.json`, `stage-state.json`, `resumes/`.
+- Переключение между проектами в UI через выпадающий список.
+- Один проект = один workspace. Импорт/экспорт архива `.zip`
+  (реализация — позже).
+- Плоская структура `data/*` без `workspaces` — устаревшая,
+  не использовать.
+
 ## 2. Причина разделения
 
 Если `contradictions` лежат в `facts.json`, а правила аудита меняются,
