@@ -34,15 +34,31 @@ const MAX_LINES = parseMaxLines(maxLinesArg);
 
 /**
  * Pre-commit check by default (staged files), full-tree check with --all.
+ * Untracked files are always included: git ls-files misses them.
  * @returns {string[]} file paths to check
  */
 function listFiles() {
-  const command = checkAll ? "git ls-files" : "git diff --cached --name-only --diff-filter=ACM";
+  const trackedCommand = checkAll ? "git ls-files" : "git diff --cached --name-only --diff-filter=ACM";
+  const tracked = gitOutputLines(trackedCommand);
+  const untracked = gitOutputLines("git ls-files --others --exclude-standard");
 
-  return execSync(command, { encoding: "utf8" })
-    .split("\n")
-    .map((file) => file.trim())
-    .filter((file) => EXTENSIONS.test(file));
+  return [...new Set([...tracked, ...untracked])];
+}
+
+/**
+ * Run a git file-listing command, return matching paths.
+ * @param command - git command to run
+ * @returns {string[]} file paths to check
+ */
+function gitOutputLines(command: string) {
+  try {
+    return execSync(command, { encoding: "utf8" })
+      .split("\n")
+      .map((file) => file.trim())
+      .filter((file) => EXTENSIONS.test(file));
+  } catch {
+    return [];
+  }
 }
 
 /**
