@@ -2,6 +2,8 @@ export { buildAuthHeader, defaultServicePath, readServicePassword, resetAuthCach
 export { readCheckpoint, savePartialResponse, writeCheckpoint } from "./checkpoint";
 export { createFetchLlmClient, createLlmClient, createLlmTransport } from "./client";
 export type { LlmClient, LlmClientOptions, LlmTransport } from "./client";
+export { defaultLogConfig, rotateIfNeeded, writeLogEntry } from "./logger";
+export type { LlmLogEntry, LogConfig } from "./logger";
 export { UnknownPromptError, getPromptSpec, promptRegistry } from "./prompt-registry";
 export type { PromptSpec } from "./prompt-registry";
 export { PromptNotFoundError, listPrompts, loadPrompt, resetPromptCache } from "./prompts";

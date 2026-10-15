@@ -1,5 +1,7 @@
 import type { ZodType } from "zod";
 import { buildAuthHeader, readServicePassword } from "./auth";
+import type { LlmLogEntry, LogConfig } from "./logger";
+import { writeLogEntry } from "./logger";
 import { health as checkHealth, ensureAlive } from "./session";
 import { callWithSchema } from "./structured-output";
 import type { LlmCallResult, LlmConfig, SessionInfo } from "./types";
@@ -22,13 +24,15 @@ export interface LlmClient {
   /** Проверка живости сервера. */
   health(): Promise<boolean>;
   /** Вызов с structured output (сессия создаётся при отсутствии). */
-  call<T>(params: { system: string; user: string; schema: ZodType<T> }): Promise<LlmCallResult<T>>;
+  call<T>(params: { system: string; user: string; schema: ZodType<T>; stage?: string }): Promise<LlmCallResult<T>>;
 }
 
 /** Опции фабрики клиента. */
 export interface LlmClientOptions {
   /** Пароль сервиса (иначе читается из service.json с кэшем). */
   password?: string;
+  /** Конфиг журнала (иначе логирование отключено). */
+  logConfig?: LogConfig;
 }
 
 /** Заголовок сессии по умолчанию. */
@@ -124,13 +128,50 @@ export function createFetchLlmClient(config: LlmConfig, options?: LlmClientOptio
   return {
     health: () => checkHealth(transport, config),
     call: async (params) => {
+      const started = Date.now();
+      let attempts = 0;
+      const counting: LlmTransport = {
+        get: (path, signal) => transport.get(path, signal),
+        post: (path, body, signal) => {
+          if (path.endsWith("/prompt")) {
+            attempts += 1;
+          }
+
+          return transport.post(path, body, signal);
+        },
+      };
+
+      const logged = async <T>(result: LlmCallResult<T>): Promise<LlmCallResult<T>> => {
+        if (options?.logConfig !== undefined) {
+          const entry: LlmLogEntry = {
+            timestamp: new Date().toISOString(),
+            stage: params.stage ?? "unknown",
+            model: config.model,
+            promptLength: params.system.length + params.user.length,
+            responseLength: result.ok ? JSON.stringify(result.data).length : 0,
+            durationMs: Date.now() - started,
+            attempts,
+            ok: result.ok,
+            errorKind: result.ok ? null : result.error.kind,
+          };
+
+          try {
+            await writeLogEntry(entry, options.logConfig);
+          } catch {
+            // Логирование никогда не ломает основной вызов.
+          }
+        }
+
+        return result;
+      };
+
       try {
         session = await ensureAlive(transport, config, session, DEFAULT_SESSION_TITLE);
       } catch (error) {
-        return toResult(error);
+        return logged(toResult(error));
       }
 
-      return callWithSchema(transport, config, session, params);
+      return logged(await callWithSchema(counting, config, session, params));
     },
   };
 }
