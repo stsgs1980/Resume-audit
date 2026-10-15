@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-const yearMonthSchema = z.string().regex(/^\d{4}-\d{2}$/, "YYYY-MM");
-const auditDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD");
+const yearMonthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "YYYY-MM");
+const auditDateSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, "YYYY-MM-DD");
 const currencySchema = z.enum(["RUB", "USD", "EUR"]).nullable();
 const factStatusSchema = z.enum(["confirmed", "needs_evidence", "remove"]);
 const shareSchema = z.number().min(0).max(1);
@@ -32,22 +32,38 @@ const resultSchema = z.object({
   hedge_required: z.boolean(),
 });
 
-const jobSchema = z.object({
-  id: z.string(),
-  company: z.string(),
-  industry: z.string().optional(),
-  position: z.string(),
-  start: yearMonthSchema,
-  end: yearMonthSchema.nullable().optional(),
-  is_current: z.boolean(),
-  overlap_group: z.string().nullable().optional(),
-  parallel_justification: z.string().optional(),
-  team_size: z.string().optional(),
-  context: z.string().optional(),
-  actions: z.array(z.string()).optional(),
-  results: z.array(resultSchema).optional(),
-  source_files: z.array(z.string()).optional(),
-});
+const jobSchema = z
+  .object({
+    id: z.string(),
+    company: z.string(),
+    industry: z.string().optional(),
+    position: z.string(),
+    start: yearMonthSchema,
+    end: yearMonthSchema.nullable().optional(),
+    is_current: z.boolean(),
+    overlap_group: z.string().nullable().optional(),
+    parallel_justification: z.string().optional(),
+    team_size: z.string().optional(),
+    context: z.string().optional(),
+    actions: z.array(z.string()).optional(),
+    results: z.array(resultSchema).optional(),
+    source_files: z.array(z.string()).optional(),
+  })
+  .superRefine((job, context) => {
+    const end = job.end ?? null;
+
+    if (job.is_current && end !== null) {
+      context.addIssue({ code: "custom", message: "is_current job must not have end" });
+    }
+
+    if (!job.is_current && end === null) {
+      context.addIssue({ code: "custom", message: "finished job must have end" });
+    }
+
+    if (end !== null && job.start > end) {
+      context.addIssue({ code: "custom", message: "job start must not be after end" });
+    }
+  });
 
 const educationSchema = z.object({
   id: z.string(),
