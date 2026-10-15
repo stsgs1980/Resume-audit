@@ -97,12 +97,12 @@ export const promptRegistry: Record<string, PromptSpec<unknown>> = {
  * @param id - id промта
  * @returns спецификация промта
  */
-export function getPromptSpec(id: string): PromptSpec<unknown> {
+export function getPromptSpec<T = unknown>(id: string): PromptSpec<T> {
   const spec = promptRegistry[id];
 
   if (spec === undefined) {
     throw new UnknownPromptError(id);
   }
 
-  return spec;
+  return spec as PromptSpec<T>;
 }
