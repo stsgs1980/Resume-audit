@@ -277,3 +277,75 @@ skillRules: {
    в чёрном списке для этой роли.
 
 Это делает приложение полезным для одного файла резюме.
+
+### 4.7. Схемы ответов LLM
+
+API 2.0.28 не имеет structured output. Мы просим LLM вернуть JSON
+в тексте ответа, извлекаем его, парсим и валидируем Zod-схемой.
+Схемы живут в `src/llm/schemas.ts`, реестр промтов — в
+`src/llm/prompt-registry.ts`. При неуспехе — ретрай, затем
+локальный `StructuredOutputError`.
+
+#### 4.7.1. extractionResponseSchema (промт extraction)
+
+Назначение: извлечение утверждений из исходных файлов (этап 2).
+
+Форма: `{ claims: [...] }`. Поля claim: `statement`, `quote`
+(min 1), `source_file`, `category` (employment | result | skill |
+tool | education | language | project | link), `metric_type`,
+`number` (или null), `currency` (RUB | USD | EUR или null),
+`status` (confirmed | needs_evidence | remove), `reason`.
+
+Особенность: `quote` обязателен — утверждение без дословной цитаты
+отбрасывается кодом и не попадает в ответ.
+
+#### 4.7.2. rolesResponseSchema (промт roles)
+
+Назначение: оценка кандидата под целевые роли (этап 5).
+
+Форма: `{ roles: [...] }`. Поля: `role_id`, `scores` (6 метрик
+0..10: experience_fit, responsibility_level, measurable_results,
+keyword_fit, hr_screen, hiring_manager), `total`, `strengths[]`,
+`gaps[]`, `overpositioning_risk` (0..10), `recommendation`.
+
+#### 4.7.3. resumeResponseSchema (промты generation_*)
+
+Назначение: генерация версии резюме (этап 7). Три промта:
+generation_sales, generation_salesops, generation_aipo — одна
+схема на всех.
+
+Форма: `title`, `specialization`, `employment_type`, `work_format`,
+`experience_total`, `experience_as_of`, `about`, `jobs[]`,
+`skills[]` (`{ skill, skill_id }`), `languages[]`. Поля job:
+`job_id`, `company`, `industry`, `position`, `period`, `duration`,
+`context`, `actions[]`, `results[]`,
+`total_experience_inconsistent`, `total_experience_note`.
+
+Каждый result обязан иметь `fact_id` (min 1) — иначе число
+не трассируется к факту и блокируется верификацией.
+`hedge_present: bool` фиксирует наличие оговорки рядом с числом.
+
+#### 4.7.4. verificationResponseSchema (промт verification)
+
+Назначение: слой 2 верификации (этап 8, дополнение к коду).
+
+Форма: `{ checks: [...], unsupported_skills: [], forbidden_words_found: [] }`.
+Поля check: `number`, `claim`, `matches_fact`, `fact_id`
+(или null), `matches_role`, `has_hedge`, `verdict`, `comment`.
+`verdict`: ok | unsupported_number | wrong_role | missing_hedge |
+is_target_metric.
+
+#### 4.7.5. Реестр промтов
+
+Все id промтов и их версии:
+
+- extraction v1
+- roles v1
+- generation_sales v1
+- generation_salesops v1
+- generation_aipo v1
+- verification v1
+
+Файлы промтов: `config/prompts/<id>.v<version>.md`.
+Загрузчик: `src/llm/prompts.ts` (`loadPrompt`, `listPrompts`).
+Реестр: `src/llm/prompt-registry.ts`, функция `getPromptSpec(id)`.
