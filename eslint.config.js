@@ -161,6 +161,23 @@ export default [
       ],
     },
   },
+  // ===== Pipeline layer boundaries =====
+  {
+    files: ["src/pipeline/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/ui/**"],
+              message: "src/pipeline не может импортировать из ui",
+            },
+          ],
+        },
+      ],
+    },
+  },
   {
     files: ["src/ui/**/*.{ts,tsx}"],
     rules: {

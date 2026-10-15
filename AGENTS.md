@@ -53,18 +53,21 @@ When a threshold is crossed:
 
 Код в одном проекте. Границы между слоями соблюдаются жёстко.
 
-| Слой   | Папка         | Может импортировать      | Не может                         |
-| ------ | ------------- | ------------------------ | -------------------------------- |
-| Ядро   | `src/core`    | только `src/core`        | `schemas`, `llm`, `server`, `ui` |
-| Схемы  | `src/schemas` | только `src/schemas`     | `core`, `llm`, `server`, `ui`    |
-| LLM    | `src/llm`     | `core`, `schemas`        | `server`, `ui`                   |
-| Сервер | `src/server`  | `core`, `schemas`, `llm` | `ui`                             |
-| UI     | `src/ui`      | `schemas`, HTTP API      | `core`, `llm`                    |
+| Слой     | Папка          | Может импортировать                        | Не может                         |
+| -------- | -------------- | ------------------------------------------ | -------------------------------- |
+| Ядро     | `src/core`     | только `src/core`                          | `schemas`, `llm`, `server`, `ui` |
+| Схемы    | `src/schemas`  | только `src/schemas`                       | `core`, `llm`, `server`, `ui`    |
+| LLM      | `src/llm`      | `core`, `schemas`                          | `server`, `ui`                   |
+| Сервер   | `src/server`   | `core`, `schemas`, `llm`                   | `ui`                             |
+| Pipeline | `src/pipeline` | `core`, `schemas`, `llm`, `server/storage` | `ui`                             |
+| UI       | `src/ui`       | `schemas`, HTTP API                        | `core`, `llm`                    |
 
 - `src/core` — чистый TypeScript. Ноль зависимостей от Node, HTTP, LLM.
 - `src/schemas` — Zod. Единый контракт для API, LLM, `facts.json`.
 - `src/llm` — обёртка над opencode SDK.
 - `src/server` — Fastify.
+- `src/pipeline` — оркестратор этапов конвейера. Импортирует только
+  `server/storage` из `server` (дисциплина, не ESLint).
 - `src/ui` — React, только HTTP к серверу.
 
 ## 6. Resume Audit Conventions
