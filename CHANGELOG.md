@@ -21,5 +21,6 @@
 - **core:** add present resolution, gaps and overlaps ([7eded4a](https://github.com/stsgs1980/Resume-audit/commit/7eded4ae6e61274bb5f96948125ad3f0106ed988))
 - **llm:** add fetch-based client with structured output and checkpoints ([5c7277a](https://github.com/stsgs1980/Resume-audit/commit/5c7277a21c117552bb008c52fec2de233158aaf9))
 - **llm:** add prompt loader, response schemas, and prompt registry ([0090e03](https://github.com/stsgs1980/Resume-audit/commit/0090e0324c5976bacc842371209108a1d17f6d80))
+- **llm:** add remaining LLM prompts (roles, generation, verification) ([e15feab](https://github.com/stsgs1980/Resume-audit/commit/e15feab397b17d19cdccac728a546a1ff5d9a6ea))
 - **schemas:** add zod schemas for facts, evidence, claims, audit, validation, stage-state ([6f82137](https://github.com/stsgs1980/Resume-audit/commit/6f821373213c9b78f7e0b0518ffdd11a3263d9ac))
 - **server:** add storage layer with workspaces and atomic writes ([b6b0ae3](https://github.com/stsgs1980/Resume-audit/commit/b6b0ae3ed2d6fa5ea5a8936a6dd3d33f6bd59488))
