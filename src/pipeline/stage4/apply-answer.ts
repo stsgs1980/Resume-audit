@@ -52,6 +52,54 @@ function detectCurrency(freeText: string): (typeof CURRENCIES)[number] | null {
 }
 
 /**
+ * Определяет интент свободного ответа по ключевым словам и отрицаниям.
+ * "positive" — явное действие удаления («удалить» / «целевая»);
+ * "negative" — факт сохраняется («не удалять» / «оставить» / «не целевая»);
+ * "unclear" — ответ не распознан.
+ *
+ * @param freeText - текст ответа
+ * @param questionType - тип вопроса
+ * @returns интент ответа
+ */
+export function parseAnswerIntent(freeText: string, questionType: string): "positive" | "negative" | "unclear" {
+  const text = freeText.toLowerCase().trim();
+
+  if (text === "") {
+    return "unclear";
+  }
+
+  if (questionType === "target_vs_measured") {
+    if (/(?:^|\s)не\s*(?:целев|target)/u.test(text)) {
+      return "negative";
+    }
+
+    if (text.includes("целев") || text.includes("target")) {
+      return "positive";
+    }
+
+    return "unclear";
+  }
+
+  if (questionType === "contradiction") {
+    if (/(?:^|\s)не\s*удал/u.test(text)) {
+      return "negative";
+    }
+
+    if (text.includes("остав")) {
+      return "negative";
+    }
+
+    if (text.includes("удал")) {
+      return "positive";
+    }
+
+    return "unclear";
+  }
+
+  return "unclear";
+}
+
+/**
  * Применяет ответ к facts.json. Неотвеченное не меняет ничего.
  *
  * @param question - вопрос этапа 4
@@ -79,7 +127,7 @@ export async function applyAnswer(
     return { factsChanged: false, warnings };
   }
 
-  const freeText = (answer.freeText ?? "").toLowerCase();
+  const freeText = answer.freeText ?? "";
   let changed = false;
 
   const setStatus = (status: "confirmed" | "remove"): void => {
@@ -95,16 +143,20 @@ export async function applyAnswer(
 
   if (question.type === "missing_evidence") {
     setStatus("confirmed");
-  } else if (question.type === "contradiction") {
-    if (freeText.includes("удалить")) {
-      setStatus("remove");
+  } else if (question.type === "contradiction" || question.type === "target_vs_measured") {
+    const intent = parseAnswerIntent(freeText, question.type);
+
+    if (intent === "unclear") {
+      warnings.push({ code: "answer_unclear", message: `Ответ не распознан, требуется уточнение: ${question.id}` });
     } else {
-      setStatus("confirmed");
+      setStatus(intent === "positive" ? "remove" : "confirmed");
     }
   } else if (question.type === "currency_missing") {
-    const currency = detectCurrency(answer.freeText ?? "");
+    const currency = detectCurrency(freeText);
 
-    if (currency !== null) {
+    if (currency === null) {
+      warnings.push({ code: "answer_unclear", message: `Ответ не распознан, требуется уточнение: ${question.id}` });
+    } else {
       for (const { jobIndex, resultIndex } of targets) {
         const result = facts.jobs[jobIndex]?.results?.[resultIndex];
 
@@ -113,12 +165,6 @@ export async function applyAnswer(
           changed = true;
         }
       }
-    }
-  } else if (question.type === "target_vs_measured") {
-    if (freeText.includes("target") || freeText.includes("целев")) {
-      setStatus("remove");
-    } else {
-      setStatus("confirmed");
     }
   } else {
     warnings.push({ code: "explained", message: `Объяснено пользователем: ${question.id}` });

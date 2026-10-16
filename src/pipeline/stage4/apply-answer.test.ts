@@ -116,6 +116,66 @@ describe("applyAnswer()", () => {
     expect((await readStatus())?.status).toBe("remove");
   });
 
+  it('target_vs_measured + "целевая метрика" -> remove', async () => {
+    await applyAnswer(
+      question({ type: "target_vs_measured" }),
+      answer({ freeText: "целевая метрика" }),
+      join(dir, "facts.json"),
+    );
+
+    expect((await readStatus())?.status).toBe("remove");
+  });
+
+  it('target_vs_measured + "это не целевая метрика, результат измерен" -> confirmed', async () => {
+    await applyAnswer(
+      question({ type: "target_vs_measured" }),
+      answer({ freeText: "это не целевая метрика, результат измерен" }),
+      join(dir, "facts.json"),
+    );
+
+    expect((await readStatus())?.status).toBe("confirmed");
+  });
+
+  it('contradiction + "не удалять, оставить" -> confirmed', async () => {
+    await applyAnswer(
+      question({ type: "contradiction" }),
+      answer({ freeText: "не удалять, оставить" }),
+      join(dir, "facts.json"),
+    );
+
+    expect((await readStatus())?.status).toBe("confirmed");
+  });
+
+  it('contradiction + "удалить" -> remove', async () => {
+    await applyAnswer(question({ type: "contradiction" }), answer({ freeText: "удалить" }), join(dir, "facts.json"));
+
+    expect((await readStatus())?.status).toBe("remove");
+  });
+
+  it("пустой ответ -> deferred: факт не меняется, warning", async () => {
+    const result = await applyAnswer(
+      question({ type: "target_vs_measured" }),
+      answer({ freeText: "" }),
+      join(dir, "facts.json"),
+    );
+
+    expect(result.factsChanged).toBe(false);
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect((await readStatus())?.status).toBe("needs_evidence");
+  });
+
+  it('непонятный ответ -> deferred: "непонятный ответ"', async () => {
+    const result = await applyAnswer(
+      question({ type: "target_vs_measured" }),
+      answer({ freeText: "непонятный ответ" }),
+      join(dir, "facts.json"),
+    );
+
+    expect(result.factsChanged).toBe(false);
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect((await readStatus())?.status).toBe("needs_evidence");
+  });
+
   it("gap объясняет -> warning без изменений", async () => {
     const result = await applyAnswer(
       question({ type: "gap" }),
