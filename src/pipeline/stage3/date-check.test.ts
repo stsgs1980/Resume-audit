@@ -74,6 +74,22 @@ describe("detectDateContradictions()", () => {
 
     expect(result).toEqual([]);
   });
+
+  it("без контекста компании -> нет contradictions (только общие слова)", () => {
+    const result = detectDateContradictions([
+      employment({
+        statement: "работал руководителем отдела продаж",
+        quote: "работал с 2020-01 по 2021-01",
+      }),
+      employment({
+        id: "claim2",
+        statement: "работал руководителем отдела продаж",
+        quote: "работал с 2022-01 по 2023-01",
+      }),
+    ]);
+
+    expect(result).toEqual([]);
+  });
 });
 
 describe("detectDurationMismatch()", () => {
