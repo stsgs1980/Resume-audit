@@ -72,6 +72,10 @@ export interface Stage3aResult {
   warnings: AuditWarning[];
   /** Счётчики. */
   counts: { contradictions: number; openQuestions: number };
+  /** Хеш facts.json (пусто, если facts.json ещё нет). */
+  factsHash: string;
+  /** Хеш мета facts.json (пусто, если facts.json ещё нет). */
+  metaHash: string;
 }
 
 /** Оценка роли. */
@@ -194,6 +198,8 @@ export interface Stage3Params extends Stage3aParams {
 export interface Stage3aParams {
   /** Путь к claims.json (запасной источник при пустом входе). */
   claimsPath: string;
+  /** Путь к facts.json для хешей в audit.json (опционально). */
+  factsPath?: string;
   /** Путь к audit.json. */
   auditPath: string;
   /** Входные утверждения. */

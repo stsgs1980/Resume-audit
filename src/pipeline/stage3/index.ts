@@ -1,6 +1,8 @@
 import { auditSchema } from "../../schemas/audit";
 import { claimsSchema } from "../../schemas/claims";
+import { factsSchema } from "../../schemas/facts";
 import { readJson, writeJsonAtomic } from "../../server/storage/files";
+import { hashFacts, hashMeta } from "../../server/storage/hash";
 import { detectDateContradictions, detectDurationMismatch, detectGaps } from "./date-check";
 import { crossCheckClaims } from "./number-check";
 import { detectParallelRoles, detectSkillConflicts } from "./overlap-check";
@@ -38,6 +40,35 @@ async function loadClaimsFile(claimsPath: string): Promise<{ claims: Claim[]; er
 }
 
 /**
+ * Считает хеши facts.json для audit.json.
+ * Файла нет — пустые хеши и предупреждение.
+ *
+ * @param factsPath - путь к facts.json (опционально)
+ * @returns хеши и текст предупреждения (null, если всё посчитано)
+ */
+async function resolveAuditHashes(
+  factsPath: string | undefined,
+): Promise<{ factsHash: string; metaHash: string; warning: string | null }> {
+  const emptyWarning = "audit создан до facts.json, hash будет заполнен при пересчёте";
+
+  if (factsPath === undefined) {
+    return { factsHash: "", metaHash: "", warning: emptyWarning };
+  }
+
+  try {
+    const facts = await readJson(factsPath, factsSchema);
+
+    return { factsHash: hashFacts(facts), metaHash: hashMeta(facts), warning: null };
+  } catch (error) {
+    if ((error as Error).name === "FileNotFoundError") {
+      return { factsHash: "", metaHash: "", warning: emptyWarning };
+    }
+
+    return { factsHash: "", metaHash: "", warning: `facts.json не прочитан: ${(error as Error).message}` };
+  }
+}
+
+/**
  * Запускает этап 3a: противоречия и открытые вопросы.
  * Исключения наружу не бросает: всё фиксируется в warnings.
  *
@@ -62,6 +93,11 @@ export async function runStage3a(params: Stage3aParams): Promise<Stage3aResult> 
     }
 
     const claims = loaded.claims;
+    const hashes = await resolveAuditHashes(params.factsPath);
+
+    if (hashes.warning !== null) {
+      fail("audit_before_facts", hashes.warning);
+    }
 
     const contradictions: Contradiction[] = [
       ...crossCheckClaims(claims),
@@ -92,11 +128,13 @@ export async function runStage3a(params: Stage3aParams): Promise<Stage3aResult> 
       openQuestions,
       warnings,
       counts: { contradictions: contradictions.length, openQuestions: openQuestions.length },
+      factsHash: hashes.factsHash,
+      metaHash: hashes.metaHash,
     };
 
     const audit = auditSchema.safeParse({
-      facts_hash: "",
-      meta_hash: "",
+      facts_hash: hashes.factsHash,
+      meta_hash: hashes.metaHash,
       generated_at: result.generatedAt,
       contradictions,
       open_questions: openQuestions,
@@ -125,6 +163,8 @@ export async function runStage3a(params: Stage3aParams): Promise<Stage3aResult> 
       openQuestions: [],
       warnings,
       counts: { contradictions: 0, openQuestions: 0 },
+      factsHash: "",
+      metaHash: "",
     };
   }
 }
@@ -152,8 +192,8 @@ export async function runStage3(params: Stage3Params): Promise<AuditResult> {
 
   const warnings = [...stage3a.warnings, ...stage3b.warnings];
   const result: AuditResult = {
-    facts_hash: "",
-    meta_hash: "",
+    facts_hash: stage3a.factsHash,
+    meta_hash: stage3a.metaHash,
     generated_at: stage3a.generatedAt,
     contradictions: stage3a.contradictions,
     open_questions: stage3a.openQuestions,

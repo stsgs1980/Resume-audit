@@ -1,7 +1,10 @@
+import { auditSchema } from "../../schemas/audit";
 import { claimsSchema } from "../../schemas/claims";
 import type { Facts } from "../../schemas/facts";
 import { factsSchema } from "../../schemas/facts";
 import { readJson, writeJsonAtomic } from "../../server/storage/files";
+import { hashFacts, hashMeta } from "../../server/storage/hash";
+import { invalidateAllDocuments } from "../../server/storage/stage-state";
 import { loadRoleConfig } from "../stage3/ats";
 import { buildEducation, buildLanguages, buildProjects, buildSkills } from "./build-entities";
 import { buildJobs, buildResults } from "./build-jobs";
@@ -25,6 +28,25 @@ async function loadClaims(claimsPath: string): Promise<{ claims: Claim[]; error:
     }
 
     return { claims: [], error: (error as Error).message };
+  }
+}
+
+/**
+ * Обновляет audit.json хешами записанных фактов.
+ * audit.json отсутствует — тихо пропускается.
+ *
+ * @param auditPath - путь к audit.json
+ * @param facts - записанные факты
+ */
+async function updateAuditHashes(auditPath: string, facts: Facts): Promise<void> {
+  try {
+    const audit = await readJson(auditPath, auditSchema);
+
+    await writeJsonAtomic(auditPath, { ...audit, facts_hash: hashFacts(facts), meta_hash: hashMeta(facts) });
+  } catch (error) {
+    if ((error as Error).name !== "FileNotFoundError") {
+      throw error;
+    }
   }
 }
 
@@ -126,6 +148,20 @@ export async function runStage4a(params: Stage4aParams): Promise<Stage4aResult> 
       warnings.push({ code: "write_failed", message: (error as Error).message });
 
       return { generatedAt: new Date().toISOString(), facts, written: false, warnings };
+    }
+
+    try {
+      await updateAuditHashes(params.auditPath, validated.data);
+    } catch (error) {
+      warnings.push({ code: "audit_update_failed", message: (error as Error).message });
+    }
+
+    if (params.storageConfig !== undefined && params.slug !== undefined) {
+      try {
+        await invalidateAllDocuments(params.storageConfig, params.slug, hashFacts(validated.data));
+      } catch (error) {
+        warnings.push({ code: "invalidate_failed", message: (error as Error).message });
+      }
     }
 
     return { generatedAt: new Date().toISOString(), facts, written: true, warnings };

@@ -62,6 +62,17 @@
 (fail-closed): при `schema_mismatch` файл не пишется, итог несёт
 `written: false` и ошибки Zod в warnings.
 
+После успешной записи 4a обновляет хеши (`facts_hash`, `meta_hash`)
+в `audit.json`, если файл существует, и — при переданных `storageConfig`
+и `slug` — помечает `stale` документы `stage-state.json` с прежним
+`facts_hash` (инвалидация производных). Этапы 7 и 8 при генерации
+и верификации пишут в `stage-state.json` актуальный `facts_hash`,
+поэтому свежие документы stale не помечаются.
+
+Порядок этапов — 3 до 4a: audit, созданный раньше фактов, несёт пустые
+хеши и warning «audit создан до facts.json, hash будет заполнен при
+пересчёте»; хеши заполняет 4a.
+
 Результаты собираются с per-role allowlist: роли результата — из
 `detected_roles` утверждения (пересечение с целевыми ролями; пусто —
 все целевые), `hedge_required` результата — из `requires_hedge`

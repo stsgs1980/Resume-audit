@@ -1,4 +1,5 @@
 import type { Facts } from "../../schemas/facts";
+import type { StorageConfig } from "../../server/storage/paths";
 import type { Claim } from "../stage2/types";
 
 export type { Claim, Facts };
@@ -33,6 +34,10 @@ export interface Stage4aParams {
   geography?: string;
   /** Имя кандидата, по умолчанию "". */
   candidateName?: string;
+  /** Конфиг хранилища для инвалидации документов (опционально). */
+  storageConfig?: StorageConfig;
+  /** Slug workspace для инвалидации документов (опционально). */
+  slug?: string;
 }
 
 /** Итог этапа 4a. */
