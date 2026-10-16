@@ -2,115 +2,19 @@ import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { LlmClient } from "../../llm/client";
-import type { ExtractionResponse, RolesResponse } from "../../llm/schemas";
-import type { LlmCallResult } from "../../llm/types";
 import type { Facts } from "../../schemas/facts";
 import { factsSchema } from "../../schemas/facts";
 import { readLockState } from "../../server/storage/lock";
 import { getLockPath } from "../../server/storage/paths";
 import { runStage1 } from "../stage1/index";
 import { runStage2 } from "../stage2/index";
-import { runStage3 } from "../stage3/index";
+import type { Claim } from "../stage2/types";
+import { runStage3, runStage3a } from "../stage3/index";
 import { runStage4a } from "../stage4/index";
 import { runStage4b } from "../stage4/review";
+import { evidenceValues, inputFor, mockClient, resumeText } from "./pipeline-fixtures";
 
 let dir = "";
-
-const resumeText = [
-  "Иван Иванов, руководитель отдела продаж.",
-  "Работал в компании Ромашка с 2020-01 по 2021-01.",
-  "По учёту выручка выросла на 4,2 млн руб.",
-].join("\n");
-
-const rawClaims: ExtractionResponse["claims"] = [
-  {
-    statement: "работал в компании Ромашка руководителем",
-    quote: "работал в компании Ромашка с 2020-01 по 2021-01",
-    source_file: "resume.md",
-    category: "employment",
-    metric_type: "",
-    number: null,
-    currency: null,
-    status: "confirmed",
-    reason: "",
-  },
-  {
-    statement: "Выручка компании Ромашка выросла на 4,2 млн",
-    quote: "по учёту выручка выросла на 4,2 млн руб",
-    source_file: "resume.md",
-    category: "result",
-    metric_type: "выручка",
-    number: 4200000,
-    currency: "RUB",
-    status: "needs_evidence",
-    reason: "",
-  },
-];
-
-const rolesPayload: RolesResponse = {
-  roles: [
-    {
-      role_id: "sales",
-      scores: {
-        experience_fit: 8,
-        responsibility_level: 8,
-        measurable_results: 7,
-        keyword_fit: 7,
-        hr_screen: 8,
-        hiring_manager: 7,
-      },
-      total: 45,
-      strengths: ["опыт"],
-      gaps: [],
-      overpositioning_risk: 2,
-      recommendation: "подходит",
-    },
-  ],
-};
-
-/**
- * Mock-клиент: extraction и roles по stage.
- *
- * @returns клиент
- */
-const mockClient = (): LlmClient => ({
-  health: () => Promise.resolve(true),
-  call: <T>(callParams: { stage?: string }): Promise<LlmCallResult<T>> => {
-    if (callParams.stage === "roles") {
-      return Promise.resolve({ ok: true, data: rolesPayload as unknown as T });
-    }
-
-    return Promise.resolve({ ok: true, data: { claims: rawClaims } as unknown as T });
-  },
-});
-
-const evidenceValues = [
-  "resume.md",
-  "выручка выросла",
-  "выручка направления",
-  "учёт 2023 минус учёт 2022",
-  "2023-01 - 2023-12",
-  "база 2022 года",
-  "управленческий учёт",
-  "направление, 4 менеджера",
-];
-
-/**
- * Ввод 4b: поля карточки по очереди, остальное свободной строкой.
- *
- * @param queue - значения полей карточки
- * @returns функция ввода
- */
-const inputFor = (queue: string[]): ((prompt: string) => Promise<string>) => {
-  return (prompt: string) => {
-    if (prompt.startsWith("Ответ (или")) {
-      return Promise.resolve("подтверждаю");
-    }
-
-    return Promise.resolve(queue.shift() ?? "значение");
-  };
-};
 
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), "pipeline-it-"));
@@ -211,5 +115,81 @@ describe("pipeline stages 1-4", () => {
         expect(typeof result.hedge_required).toBe("boolean");
       }
     }
+  });
+});
+
+describe("эвристики этапа 4 (группа D)", () => {
+  const employment = (id: string, company: string, period: string): Claim => ({
+    id,
+    statement: `работал руководителем отдела продаж в компании ${company}`,
+    quote: `работал в компании ${company} с ${period}`,
+    source_file: "resume.md",
+    category: "employment",
+    metric_type: "",
+    number: null,
+    currency: null,
+    status: "confirmed",
+    reason: "",
+  });
+
+  it("голый год в цитате не создаёт job с датой 2000-01", async () => {
+    const claimsPath = join(dir, "claims.json");
+    const factsPath = join(dir, "facts.json");
+    const auditPath = join(dir, "audit.json");
+
+    await writeFile(
+      claimsPath,
+      JSON.stringify({
+        claims: [
+          {
+            ...employment("claim1", "Ромашка", "2020-01 по 2021-01"),
+            statement: "работал в компании Ромашка",
+            quote: "работал в компании Ромашка, привлёк 2000 клиентов за год",
+          },
+        ],
+      }),
+      "utf8",
+    );
+
+    const result = await runStage4a({
+      claimsPath,
+      factsPath,
+      auditPath,
+      rolesConfigPath: "config/roles/sales.json",
+      auditDate: "2026-10-09",
+    });
+    const stored = JSON.parse(await readFile(factsPath, "utf8")) as Facts;
+
+    expect(result.facts.jobs).toEqual([]);
+    expect(stored.jobs).toEqual([]);
+    expect(result.warnings.some((warning) => warning.code === "no_dates")).toBe(true);
+  });
+
+  it("две разные компании не дают ложного date_mismatch", async () => {
+    const claimsPath = join(dir, "claims.json");
+    const auditPath = join(dir, "audit.json");
+
+    await writeFile(
+      claimsPath,
+      JSON.stringify({
+        claims: [
+          employment("claim1", "Ромашка", "2020-01 по 2021-01"),
+          employment("claim2", "Лютик", "2022-01 по 2023-01"),
+        ],
+      }),
+      "utf8",
+    );
+
+    const result = await runStage3a({
+      claimsPath,
+      auditPath,
+      claims: [],
+      auditDate: "2026-10-09",
+      roles: [],
+    });
+    const stored = JSON.parse(await readFile(auditPath, "utf8")) as { contradictions: Array<{ kind: string }> };
+
+    expect(result.contradictions).toEqual([]);
+    expect(stored.contradictions.some((item) => item.kind === "date_mismatch")).toBe(false);
   });
 });
