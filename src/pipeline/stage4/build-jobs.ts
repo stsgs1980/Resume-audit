@@ -72,10 +72,11 @@ export function buildJobs(claims: Claim[], roles: string[]): { jobs: Job[]; warn
 
     const ranges = new Map<string, number>();
     const starts: string[] = [];
+    const usable = group
+      .map((claim) => extractDateRange(claim.quote))
+      .filter((range) => range.confidence === "high" || range.confidence === "medium");
 
-    for (const claim of group) {
-      const range = extractDateRange(claim.quote);
-
+    for (const range of usable) {
       if (range.start !== null) {
         starts.push(range.start);
         ranges.set(`${range.start}|${range.end ?? ""}`, (ranges.get(`${range.start}|${range.end ?? ""}`) ?? 0) + 1);
@@ -83,7 +84,7 @@ export function buildJobs(claims: Claim[], roles: string[]): { jobs: Job[]; warn
     }
 
     if (starts.length === 0) {
-      warnings.push({ code: "no_dates", message: `Даты не найдены, работа пропущена: ${company}` });
+      warnings.push({ code: "no_dates", message: `Недостаточно данных для дат, работа пропущена: ${company}` });
 
       continue;
     }
@@ -101,7 +102,7 @@ export function buildJobs(claims: Claim[], roles: string[]): { jobs: Job[]; warn
     const [start, endRaw] = best.split("|");
     const end = endRaw === "" || endRaw === undefined ? null : endRaw;
     const firstQuote = group.map((claim) => claim.quote).find((quote) => quote.trim() !== "") ?? "";
-    const isCurrent = group.some((claim) => extractDateRange(claim.quote).isCurrent);
+    const isCurrent = usable.some((range) => range.isCurrent);
 
     if (!isCurrent && end === null) {
       warnings.push({ code: "open_end", message: `Нет даты конца, работа пропущена: ${company}` });

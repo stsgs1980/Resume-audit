@@ -65,6 +65,23 @@ describe("buildJobs()", () => {
 
     expect(jobs[0]).toMatchObject({ start: "2020-01", end: "2021-01", is_current: false });
   });
+
+  it("голый год не становится датой: job не создаётся, warning", () => {
+    const { jobs, warnings } = buildJobs([employment({ quote: "в компании Ромашка привлёк 2000 клиентов" })], roles);
+
+    expect(jobs).toEqual([]);
+    expect(warnings.some((warning) => warning.code === "no_dates")).toBe(true);
+  });
+
+  it("цитата с голым годом игнорируется, если есть полная дата", () => {
+    const { jobs } = buildJobs(
+      [employment(), employment({ id: "claim2", quote: "в компании Ромашка привлёк 2000 клиентов" })],
+      roles,
+    );
+
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]).toMatchObject({ start: "2020-01", end: "2021-01" });
+  });
 });
 
 describe("buildResults()", () => {
