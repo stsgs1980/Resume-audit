@@ -1,9 +1,11 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { LlmClient } from "../../llm/client";
+import type { LlmCallResult } from "../../llm/types";
 import type { Claim } from "../stage2/types";
-import { runStage3a } from "./index";
+import { runStage3, runStage3a } from "./index";
 import type { Stage3aParams } from "./types";
 
 let dir = "";
@@ -110,5 +112,66 @@ describe("runStage3a()", () => {
     const result = await runStage3a(params([]));
 
     expect(result.openQuestions.map((question) => question.type)).toContain("currency_missing");
+  });
+});
+
+describe("runStage3()", () => {
+  it("пишет полный audit.json с roles и ats", async () => {
+    const promptsDir = join(dir, "prompts");
+
+    await mkdir(promptsDir, { recursive: true });
+    await writeFile(join(promptsDir, "roles.v1.md"), "# roles", "utf8");
+
+    const rolesData = {
+      roles: [
+        {
+          role_id: "sales",
+          scores: {
+            experience_fit: 8,
+            responsibility_level: 7,
+            measurable_results: 9,
+            keyword_fit: 6,
+            hr_screen: 7,
+            hiring_manager: 8,
+          },
+          total: 45,
+          strengths: ["опыт"],
+          gaps: [],
+          overpositioning_risk: 2,
+          recommendation: "подходит",
+        },
+      ],
+    };
+    const llmClient: LlmClient = {
+      health: () => Promise.resolve(true),
+      call: <T>(): Promise<LlmCallResult<T>> => Promise.resolve({ ok: true, data: rolesData as unknown as T }),
+    };
+
+    const result = await runStage3({
+      claims: [claim()],
+      claimsPath: join(dir, "claims.json"),
+      auditPath: join(dir, "audit.json"),
+      auditDate: "2026-10-09",
+      roles: ["sales"],
+      rolesConfigPath: "config/roles/sales.json",
+      llmClient,
+      promptConfig: { promptsDir },
+      vacancyText: null,
+      targetRoleId: "sales",
+    });
+
+    expect(result.roles).toHaveLength(1);
+    expect(result.ats?.roleId).toBe("sales");
+
+    const stored = JSON.parse(await readFile(join(dir, "audit.json"), "utf8")) as {
+      contradictions: unknown[];
+      open_questions: unknown[];
+      roles: unknown[];
+      ats: unknown;
+    };
+
+    expect(Array.isArray(stored.contradictions)).toBe(true);
+    expect(stored.roles).toHaveLength(1);
+    expect(stored.ats).toMatchObject({ roleId: "sales" });
   });
 });

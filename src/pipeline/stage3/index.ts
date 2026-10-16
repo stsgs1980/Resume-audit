@@ -4,7 +4,17 @@ import { detectDateContradictions, detectDurationMismatch, detectGaps } from "./
 import { crossCheckClaims } from "./number-check";
 import { detectParallelRoles, detectSkillConflicts } from "./overlap-check";
 import { generateCurrencyQuestions, generateEvidenceQuestions, generateTargetVsMeasured } from "./question-generator";
-import type { AuditWarning, Claim, Contradiction, OpenQuestion, Stage3aParams, Stage3aResult } from "./types";
+import { runStage3b } from "./stage3b";
+import type {
+  AuditResult,
+  AuditWarning,
+  Claim,
+  Contradiction,
+  OpenQuestion,
+  Stage3aParams,
+  Stage3aResult,
+  Stage3Params,
+} from "./types";
 
 /**
  * Загружает claims из файла (запасной источник при пустом входе).
@@ -99,4 +109,53 @@ export async function runStage3a(params: Stage3aParams): Promise<Stage3aResult> 
       counts: { contradictions: 0, openQuestions: 0 },
     };
   }
+}
+
+/**
+ * Запускает этап 3 целиком: 3a, затем 3b, затем полный audit.json.
+ * Исключения наружу не бросает.
+ *
+ * @param params - объединённые параметры 3a и 3b
+ * @returns полный итог аудита
+ */
+export async function runStage3(params: Stage3Params): Promise<AuditResult> {
+  const stage3a = await runStage3a(params);
+  let stage3b: { roles: AuditResult["roles"]; ats: AuditResult["ats"]; warnings: AuditWarning[] };
+
+  try {
+    stage3b = await runStage3b(params);
+  } catch (error) {
+    stage3b = {
+      roles: [],
+      ats: null,
+      warnings: [{ id: "warn0", kind: "stage3_error", message: (error as Error).message }],
+    };
+  }
+
+  const warnings = [...stage3a.warnings, ...stage3b.warnings];
+  const result: AuditResult = {
+    facts_hash: "",
+    meta_hash: "",
+    generated_at: stage3a.generatedAt,
+    contradictions: stage3a.contradictions,
+    open_questions: stage3a.openQuestions,
+    warnings,
+    roles: stage3b.roles,
+    ats: stage3b.ats,
+  };
+
+  try {
+    await writeJsonAtomic(params.auditPath, {
+      ...result,
+      warnings: warnings.map((warning) => ({ ...warning, code: warning.kind })),
+    });
+  } catch (error) {
+    warnings.push({
+      id: `warn${warnings.length + 1}`,
+      kind: "stage3_error",
+      message: (error as Error).message,
+    });
+  }
+
+  return { ...result, warnings };
 }
