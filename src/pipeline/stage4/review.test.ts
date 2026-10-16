@@ -157,4 +157,33 @@ describe("runStage4b()", () => {
     expect(result.locked).toBe(true);
     expect(result.lockReasons).toEqual([]);
   });
+
+  it("неоднозначный свободный ответ -> deferred, warning, статус в файле", async () => {
+    await setup([question({ type: "contradiction" })]);
+
+    const result = await runStage4b(params(["непонятный ответ"], []));
+
+    expect(result.answersProcessed).toBe(0);
+    expect(result.answersDeferred).toBe(1);
+    expect(result.warnings.some((warning) => warning.code === "answer_unclear")).toBe(true);
+
+    const stored = JSON.parse(await readFile(join(dir, "answers", "q_001.json"), "utf8")) as { status: string };
+
+    expect(stored.status).toBe("deferred");
+  });
+
+  it('contradiction + "удалить" -> remove, счётчик answered', async () => {
+    await setup([question({ type: "contradiction" })]);
+
+    const result = await runStage4b(params(["удалить"], []));
+
+    expect(result.answersProcessed).toBe(1);
+    expect(result.warnings).toEqual([]);
+
+    const stored = JSON.parse(await readFile(join(dir, "facts.json"), "utf8")) as {
+      jobs: Array<{ results?: Array<{ status: string }> }>;
+    };
+
+    expect(stored.jobs[0]?.results?.[0]?.status).toBe("remove");
+  });
 });
