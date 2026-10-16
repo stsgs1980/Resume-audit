@@ -5,6 +5,7 @@
 ### Bug Fixes
 
 - **build:** check untracked files in file-length script ([f797600](https://github.com/stsgs1980/Resume-audit/commit/f7976006532f86489c861d7a95cb5268567ae7d5))
+- **core,pipeline:** close verification gaps for currency, qualifier, per-role allowlist, hedge ([6ceaa7f](https://github.com/stsgs1980/Resume-audit/commit/6ceaa7fed021d5c6bb495761d941b39f4e8438af))
 - **core:** fix gap detection and causality source markers ([76cad40](https://github.com/stsgs1980/Resume-audit/commit/76cad408e3514fae0e1189dbbb0a60b22243c237))
 - **husky:** run lint-staged and file-length check on pre-commit ([717dce4](https://github.com/stsgs1980/Resume-audit/commit/717dce4ed2b9862675f7997bc0008c180544f01e))
 - **pipeline:** block export on forbidden words, placeholders, target metrics ([7dc0fb9](https://github.com/stsgs1980/Resume-audit/commit/7dc0fb93a1d40d639d42b140a50d071f706a1739))
