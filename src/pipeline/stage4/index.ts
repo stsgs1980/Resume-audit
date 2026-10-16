@@ -1,0 +1,126 @@
+import { readFile } from "node:fs/promises";
+import type { Facts } from "../../schemas/facts";
+import { factsSchema } from "../../schemas/facts";
+import { writeJsonAtomic } from "../../server/storage/files";
+import { loadRoleConfig } from "../stage3/ats";
+import { buildEducation, buildLanguages, buildProjects, buildSkills } from "./build-entities";
+import { buildJobs, buildResults } from "./build-jobs";
+import { buildMeta } from "./build-meta";
+import type { Claim, Stage4aParams, Stage4aResult, Stage4Warning } from "./types";
+
+/**
+ * Читает утверждения из claims.json.
+ *
+ * @param claimsPath - путь к claims.json
+ * @returns утверждения или []
+ */
+async function loadClaims(claimsPath: string): Promise<Claim[]> {
+  try {
+    const parsed = JSON.parse(await readFile(claimsPath, "utf8")) as { claims?: unknown };
+
+    return Array.isArray(parsed.claims) ? (parsed.claims as Claim[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Пустой скелет фактов.
+ *
+ * @param params - параметры этапа
+ * @param targets - цели из конфига роли
+ * @returns факты без записей
+ */
+async function emptyFacts(
+  params: Stage4aParams,
+  targets: Array<{ id: string; title: string; share: number }>,
+): Promise<Facts> {
+  return {
+    schema_version: 1,
+    meta: buildMeta({
+      candidateName: params.candidateName ?? "",
+      auditDate: params.auditDate,
+      geography: params.geography ?? "Москва",
+      targets,
+    }),
+    jobs: [],
+    education: [],
+    languages: [],
+    confirmed_skills: [],
+    portfolio_projects: [],
+  };
+}
+
+/**
+ * Запускает этап 4a: claims.json -> скелет facts.json.
+ * Исключения наружу не бросает: всё фиксируется в warnings.
+ *
+ * @param params - пути, конфиг роли, дата, география, имя
+ * @returns итог этапа
+ */
+export async function runStage4a(params: Stage4aParams): Promise<Stage4aResult> {
+  const warnings: Stage4Warning[] = [];
+
+  try {
+    const claims = await loadClaims(params.claimsPath);
+    const roleConfig = await loadRoleConfig(params.rolesConfigPath);
+    const roles = roleConfig.targets.map((target) => target.id);
+
+    if (claims.length === 0) {
+      const roleConfig = await loadRoleConfig(params.rolesConfigPath);
+
+      return {
+        generatedAt: new Date().toISOString(),
+        facts: await emptyFacts(params, roleConfig.targets),
+        warnings,
+      };
+    }
+
+    const builtJobs = buildJobs(claims, roles);
+
+    warnings.push(...builtJobs.warnings);
+
+    const withResults = buildResults(claims, builtJobs.jobs, roles);
+
+    warnings.push(...withResults.warnings);
+
+    const facts: Facts = {
+      schema_version: 1,
+      meta: buildMeta({
+        candidateName: params.candidateName ?? "",
+        auditDate: params.auditDate,
+        geography: params.geography ?? "Москва",
+        targets: roleConfig.targets,
+      }),
+      jobs: withResults.jobs,
+      education: buildEducation(claims),
+      languages: buildLanguages(claims),
+      confirmed_skills: buildSkills(claims, roles),
+      portfolio_projects: buildProjects(claims, roles),
+    };
+    const validated = factsSchema.safeParse(facts);
+
+    if (!validated.success) {
+      warnings.push({
+        code: "schema_mismatch",
+        message: `facts.json не прошёл схему: ${JSON.stringify(validated.error.issues)}`,
+      });
+    }
+
+    try {
+      await writeJsonAtomic(params.factsPath, facts);
+    } catch (error) {
+      warnings.push({ code: "write_failed", message: (error as Error).message });
+    }
+
+    return { generatedAt: new Date().toISOString(), facts, warnings };
+  } catch (error) {
+    warnings.push({ code: "stage4_error", message: (error as Error).message });
+
+    return {
+      generatedAt: new Date().toISOString(),
+      facts: await emptyFacts(params, []),
+      warnings,
+    };
+  }
+}
