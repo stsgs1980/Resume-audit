@@ -1,7 +1,7 @@
 export { auditSchema } from "./audit";
 export type { Audit } from "./audit";
-export { claimsSchema } from "./claims";
-export type { Claims } from "./claims";
+export { claimSchema, claimsSchema } from "./claims";
+export type { Claim, Claims } from "./claims";
 export { evidenceSchema } from "./evidence";
 export type { Evidence } from "./evidence";
 export { factsSchema } from "./facts";

@@ -39,11 +39,15 @@ const minimalClaims = {
   claims: [
     {
       id: "claim1",
-      statement: "",
+      statement: "рост выручки на 4,2 млн",
       quote: "цитата из файла",
       source_file: "resume.docx",
       category: "result",
+      metric_type: "выручка",
+      number: 4200000,
+      currency: "RUB",
       status: "confirmed",
+      reason: "",
     },
   ],
 };

@@ -1,42 +1,17 @@
 import type { LlmClient } from "../../llm/client";
 import type { ExtractionResponse } from "../../llm/schemas";
+import type { Claim } from "../../schemas/claims";
+
+export type { Claim };
 
 /** Сырое утверждение из ответа LLM (без id). */
 export type RawClaim = ExtractionResponse["claims"][number];
 
 /** Категория утверждения. */
-export type ClaimCategory = "employment" | "result" | "skill" | "tool" | "education" | "language" | "project" | "link";
+export type ClaimCategory = Claim["category"];
 
 /** Статус утверждения. */
-export type ClaimStatus = "confirmed" | "needs_evidence" | "remove";
-
-/** Утверждение с присвоенным id. */
-export interface Claim {
-  /** Id вида "claim1". */
-  id: string;
-  /** Формулировка утверждения. */
-  statement: string;
-  /** Дословная цитата. */
-  quote: string;
-  /** Файл-источник. */
-  source_file: string;
-  /** Категория. */
-  category: ClaimCategory;
-  /** Тип метрики. */
-  metric_type: string;
-  /** Число или null. */
-  number: number | null;
-  /** Валюта или null. */
-  currency: "RUB" | "USD" | "EUR" | null;
-  /** Статус. */
-  status: ClaimStatus;
-  /** Пояснение. */
-  reason: string;
-  /** Роли, явно упомянутые в контексте (если есть). */
-  detected_roles?: string[];
-  /** Косвенная метрика: требуется оговорка. */
-  requires_hedge?: boolean;
-}
+export type ClaimStatus = Claim["status"];
 
 /** Итог этапа 2. */
 export interface ClaimsResult {

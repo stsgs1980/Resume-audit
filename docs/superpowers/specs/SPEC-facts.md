@@ -211,11 +211,11 @@ data/
   "claims": [
     {
       "id": "claim1",
-      "statement": "",
-      "quote": "",
-      "source_file": "",
+      "statement": "рост выручки на 4,2 млн руб.",
+      "quote": "по учёту выручка выросла на 4,2 млн руб.",
+      "source_file": "resume.docx",
       "category": "employment | result | skill | tool | education | language | project | link",
-      "metric_type": "свободная строка или null (например выручка, конверсия, иное)",
+      "metric_type": "свободная строка (например выручка, конверсия, иное; пустая допустима)",
       "number": null,
       "currency": "RUB | USD | EUR | null",
       "status": "confirmed | needs_evidence | remove",
@@ -228,9 +228,10 @@ data/
 ```
 
 Источник правды — `src/schemas/claims.ts`. Обязательны `id`,
-`statement`, `quote`, `source_file`, `category`, `status`.
-Опциональны `metric_type`, `number`, `currency`, `reason`,
-`detected_roles` (роли, явно упомянутые в контексте) и
+`statement` (непустая), `quote` (непустая), `source_file`, `category`,
+`metric_type` (строка, пустая допустима), `number` (число или `null`),
+`currency` (`RUB | USD | EUR | null`), `status`, `reason`.
+Опциональны `detected_roles` (роли, явно упомянутые в контексте) и
 `requires_hedge` (косвенная метрика, требуется оговорка).
 Утверждение без цитаты удаляется кодом — см. раздел
 про валидацию при сохранении ниже.
