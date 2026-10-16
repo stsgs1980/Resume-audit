@@ -6,10 +6,24 @@ import { readJson, writeJsonAtomic } from "./files";
 import type { StorageConfig } from "./paths";
 import { getLockPath } from "./paths";
 
-/** Состояние фактов: черновик или зафиксированы. */
-export type LockState = "draft" | "locked";
+/**
+ * Состояние фактов: черновик или зафиксированы, с временем блокировки.
+ * Формат единый для storage и pipeline (см. stage4/lock.ts tryLock).
+ */
+export interface LockState {
+  /** Состояние: черновик или зафиксированы. */
+  state: "draft" | "locked";
+  /** Время блокировки в ISO 8601, null если draft. */
+  lockedAt: string | null;
+}
 
-const lockStateSchema = z.enum(["draft", "locked"]);
+const lockStateSchema = z.object({
+  state: z.enum(["draft", "locked"]),
+  lockedAt: z.string().nullable(),
+});
+
+/** Legacy-формат: голая строка (читается, но больше не пишется). */
+const legacyLockStateSchema = z.enum(["draft", "locked"]);
 
 /** Итог проверки возможности перехода в locked. */
 export interface LockCheck {
@@ -20,7 +34,8 @@ export interface LockCheck {
 }
 
 /**
- * Читает состояние фактов. Файла нет — "draft".
+ * Читает состояние фактов. Файла нет — draft без времени.
+ * Legacy-строка "draft"/"locked" читается как объект без времени.
  *
  * @param config - конфиг хранилища
  * @param slug - slug workspace
@@ -33,7 +48,7 @@ export async function readLockState(config: StorageConfig, slug: string): Promis
     state = await readJson(getLockPath(config, slug), z.unknown());
   } catch (error) {
     if ((error as Error).name === "FileNotFoundError") {
-      return "draft";
+      return { state: "draft", lockedAt: null };
     }
 
     throw error;
@@ -41,11 +56,17 @@ export async function readLockState(config: StorageConfig, slug: string): Promis
 
   const parsed = lockStateSchema.safeParse(state);
 
-  if (!parsed.success) {
-    throw new Error(`Invalid lock state in workspace "${slug}"`);
+  if (parsed.success) {
+    return parsed.data;
   }
 
-  return parsed.data;
+  const legacy = legacyLockStateSchema.safeParse(state);
+
+  if (legacy.success) {
+    return { state: legacy.data, lockedAt: null };
+  }
+
+  throw new Error(`Invalid lock state in workspace "${slug}"`);
 }
 
 /**

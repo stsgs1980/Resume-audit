@@ -30,6 +30,7 @@ const resultSchema = z.object({
   roles: z.array(z.string()),
   evidence_id: z.string(),
   hedge_required: z.boolean(),
+  source_claim_id: z.string().optional(),
 });
 
 const jobSchema = z

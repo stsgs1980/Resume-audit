@@ -107,4 +107,32 @@ describe("runStage4a()", () => {
     ]);
     expect(result.facts.meta.audit_date).toBe("2026-10-09");
   });
+
+  it("валидные факты -> written: true, файл создан", async () => {
+    await writeClaims([claim()]);
+
+    const result = await runStage4a(params());
+
+    expect(result.written).toBe(true);
+
+    const stored = JSON.parse(await readFile(join(dir, "facts.json"), "utf8")) as {
+      jobs: unknown[];
+    };
+
+    expect(stored.jobs).toHaveLength(result.facts.jobs.length);
+  });
+
+  it("невалидные факты -> written: false, файл не создан", async () => {
+    await writeClaims([claim()]);
+
+    const bad = { ...params(), auditDate: "не дата" };
+    const result = await runStage4a(bad);
+
+    expect(result.written).toBe(false);
+    expect(result.warnings.some((warning) => warning.code === "schema_mismatch")).toBe(true);
+
+    const missing = await readFile(join(dir, "facts.json"), "utf8").catch(() => null);
+
+    expect(missing).toBeNull();
+  });
 });

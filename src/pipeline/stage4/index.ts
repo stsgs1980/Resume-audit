@@ -72,6 +72,7 @@ export async function runStage4a(params: Stage4aParams): Promise<Stage4aResult> 
       return {
         generatedAt: new Date().toISOString(),
         facts: await emptyFacts(params, roleConfig.targets),
+        written: false,
         warnings,
       };
     }
@@ -105,21 +106,26 @@ export async function runStage4a(params: Stage4aParams): Promise<Stage4aResult> 
         code: "schema_mismatch",
         message: `facts.json не прошёл схему: ${JSON.stringify(validated.error.issues)}`,
       });
+
+      return { generatedAt: new Date().toISOString(), facts, written: false, warnings };
     }
 
     try {
-      await writeJsonAtomic(params.factsPath, facts);
+      await writeJsonAtomic(params.factsPath, validated.data);
     } catch (error) {
       warnings.push({ code: "write_failed", message: (error as Error).message });
+
+      return { generatedAt: new Date().toISOString(), facts, written: false, warnings };
     }
 
-    return { generatedAt: new Date().toISOString(), facts, warnings };
+    return { generatedAt: new Date().toISOString(), facts, written: true, warnings };
   } catch (error) {
     warnings.push({ code: "stage4_error", message: (error as Error).message });
 
     return {
       generatedAt: new Date().toISOString(),
       facts: await emptyFacts(params, []),
+      written: false,
       warnings,
     };
   }

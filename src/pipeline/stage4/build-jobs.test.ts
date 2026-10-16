@@ -84,6 +84,15 @@ describe("buildResults()", () => {
     expect(result).toMatchObject({ number: 4200000, currency: "RUB", evidence_id: result?.id });
   });
 
+  it("source_claim_id указывает на claim-источник", () => {
+    const { jobs } = buildJobs([employment()], roles);
+    const { jobs: withResults } = buildResults([resultClaim()], jobs, roles);
+    const result = withResults[0]?.results?.[0];
+
+    expect(result?.source_claim_id).toBe("claim9");
+    expect(result?.evidence_id).toBe(result?.id);
+  });
+
   it("result без привязки -> warning", () => {
     const { jobs } = buildJobs([employment()], roles);
     const { warnings } = buildResults(

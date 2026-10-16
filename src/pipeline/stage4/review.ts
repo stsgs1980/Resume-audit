@@ -1,5 +1,7 @@
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
+import type { Facts } from "../../schemas/facts";
 import { stageStateSchema } from "../../schemas/stage-state";
 import { readJson, writeJsonAtomic } from "../../server/storage/files";
 import type { OpenQuestion } from "../stage3/types";
@@ -7,7 +9,7 @@ import { applyAnswer } from "./apply-answer";
 import { writeEvidence } from "./evidence-writer";
 import { tryLock } from "./lock";
 import { filterUnanswered, loadQuestions, saveAnswer } from "./question-queue";
-import type { Answer, EvidenceData, Stage4bParams, Stage4bResult } from "./types";
+import type { Answer, EvidenceData, JobResult, Stage4bParams, Stage4bResult } from "./types";
 
 /** Вопросы для 8 полей карточки evidence. */
 const EVIDENCE_PROMPTS: Array<{ label: string; field: keyof EvidenceData }> = [
@@ -63,20 +65,37 @@ async function collectEvidence(
 }
 
 /**
+ * Загружает результаты из facts.json для связи claim -> result.
+ * При ошибке чтения возвращает пустой список (связь даст fallback).
+ *
+ * @param factsPath - путь к facts.json
+ * @returns результаты всех работ
+ */
+async function loadResults(factsPath: string): Promise<JobResult[]> {
+  try {
+    const facts = JSON.parse(await readFile(factsPath, "utf8")) as Facts;
+
+    return facts.jobs.flatMap((job) => job.results ?? []);
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Обрабатывает один вопрос: вывод, ввод, сохранение, evidence, применение.
  *
  * @param question - вопрос
  * @param params - параметры этапа
  * @param inputFn - функция ввода
  * @param outputFn - функция вывода
- * @returns статус ответа и fact_id карточки (если создана)
+ * @returns статус ответа, fact_id карточки и предупреждения
  */
 async function processQuestion(
   question: OpenQuestion,
   params: Stage4bParams,
   inputFn: (prompt: string) => Promise<string>,
   outputFn: (line: string) => void,
-): Promise<{ status: Answer["status"]; factId: string | null }> {
+): Promise<{ status: Answer["status"]; factId: string | null; warnings: Array<{ code: string; message: string }> }> {
   outputFn(`=== Вопрос ${question.id} (${question.type}) ===`);
   outputFn(question.question);
   outputFn(`Контекст: ${question.context}`);
@@ -109,16 +128,25 @@ async function processQuestion(
   await saveAnswer(answer, params.answersPath);
 
   let factId: string | null = null;
+  const warnings: Array<{ code: string; message: string }> = [];
 
   if (answer.status === "answered" && answer.evidence !== undefined) {
-    factId = await writeEvidence(question, answer.evidence, [], params.evidenceDir);
+    const written = await writeEvidence(
+      question,
+      answer.evidence,
+      await loadResults(params.factsPath),
+      params.evidenceDir,
+    );
+
+    factId = written.factId;
+    warnings.push(...written.warnings);
   }
 
   if (answer.status === "answered") {
     await applyAnswer(question, answer, params.factsPath);
   }
 
-  return { status: answer.status, factId };
+  return { status: answer.status, factId, warnings };
 }
 
 /**
@@ -176,7 +204,13 @@ export async function runStage4b(params: Stage4bParams): Promise<Stage4bResult> 
 
     for (const question of questions) {
       try {
-        const { status, factId } = await processQuestion(question, params, inputFn, outputFn);
+        const {
+          status,
+          factId,
+          warnings: questionWarnings,
+        } = await processQuestion(question, params, inputFn, outputFn);
+
+        warnings.push(...questionWarnings);
 
         if (status === "answered") {
           result.answersProcessed += 1;

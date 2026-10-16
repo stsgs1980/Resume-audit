@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { OpenQuestion } from "../stage3/types";
 import { writeEvidence } from "./evidence-writer";
-import type { EvidenceData } from "./types";
+import type { EvidenceData, JobResult } from "./types";
 
 let dir = "";
 
@@ -13,7 +13,7 @@ const question: OpenQuestion = {
   type: "missing_evidence",
   question: "Чем подтверждается?",
   context: "a.docx",
-  relatedClaimIds: ["res1"],
+  relatedClaimIds: ["claim13"],
   createdFrom: "audit#gap",
 };
 
@@ -28,6 +28,20 @@ const data: EvidenceData = {
   zoneOfInfluence: "отдел",
 };
 
+const result: JobResult = {
+  id: "res1",
+  key: "",
+  text: "выручка выросла",
+  number: 4200000,
+  unit: "",
+  currency: "RUB",
+  status: "needs_evidence",
+  roles: ["sales"],
+  evidence_id: "res1",
+  hedge_required: false,
+  source_claim_id: "claim13",
+};
+
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), "stage4-evidence-"));
 });
@@ -37,10 +51,11 @@ afterEach(async () => {
 });
 
 describe("writeEvidence()", () => {
-  it("пишет карточку в evidence/<fact_id>.json", async () => {
-    const factId = await writeEvidence(question, data, [], dir);
+  it("claim id разрешается в evidence_id результата", async () => {
+    const { factId, warnings } = await writeEvidence(question, data, [result], dir);
 
     expect(factId).toBe("res1");
+    expect(warnings).toEqual([]);
 
     const stored = JSON.parse(await readFile(join(dir, "res1.json"), "utf8")) as Record<string, unknown>;
 
@@ -60,7 +75,7 @@ describe("writeEvidence()", () => {
   });
 
   it("confirmed_on = сегодняшняя дата", async () => {
-    await writeEvidence(question, data, [], dir);
+    await writeEvidence(question, data, [result], dir);
 
     const stored = JSON.parse(await readFile(join(dir, "res1.json"), "utf8")) as {
       confirmed_on: string;
@@ -69,8 +84,15 @@ describe("writeEvidence()", () => {
     expect(stored.confirmed_on).toBe(new Date().toISOString().slice(0, 10));
   });
 
+  it("без связи пишет по claim id с warning", async () => {
+    const { factId, warnings } = await writeEvidence(question, data, [], dir);
+
+    expect(factId).toBe("claim13");
+    expect(warnings.length).toBeGreaterThan(0);
+  });
+
   it("без relatedClaimIds использует questionId как fallback", async () => {
-    const factId = await writeEvidence({ ...question, relatedClaimIds: [] }, data, [], dir);
+    const { factId } = await writeEvidence({ ...question, relatedClaimIds: [] }, data, [], dir);
 
     expect(factId).toBe("q_001");
   });

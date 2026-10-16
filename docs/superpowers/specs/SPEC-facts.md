@@ -134,7 +134,15 @@ data/
 
 ## 6. Поле evidence_id
 
-Ссылается на карточку доказательства в `data/evidence/<id>.json`.
+Ссылается на карточку доказательства в `data/evidence/<id>.json`,
+где `<id>` — `evidence_id` результата (совпадает с `id` результата:
+файл `evidence/res1.json` для результата `res1`).
+
+Связь claim -> result хранит опциональное поле результата
+`source_claim_id` (id утверждения этапа 2, из которого построен
+результат). Карточка ищется по `source_claim_id` из
+`relatedClaimIds` вопроса; без связи пишется fallback
+по claim id с предупреждением `evidence_unlinked`.
 
 Карточка заполняется человеком на этапе 4. Обязательные поля:
 `source_file`, `quote`, `metric_definition`, `period`, `baseline`,

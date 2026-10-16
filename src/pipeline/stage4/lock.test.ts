@@ -2,6 +2,8 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { readLockState } from "../../server/storage/lock";
+import { getLockPath } from "../../server/storage/paths";
 import { tryLock } from "./lock";
 
 let dir = "";
@@ -83,5 +85,18 @@ describe("tryLock()", () => {
 
     expect(result.locked).toBe(false);
     expect(result.reasons.length).toBeGreaterThan(0);
+  });
+
+  it("файл от tryLock читается через readLockState", async () => {
+    const config = { rootDir: dir };
+    const lockPath = getLockPath(config, "ws");
+    const result = await tryLock(join(dir, "facts.json"), lockPath, dir, dir);
+
+    expect(result.locked).toBe(true);
+
+    const state = await readLockState(config, "ws");
+
+    expect(state.state).toBe("locked");
+    expect(typeof state.lockedAt).toBe("string");
   });
 });

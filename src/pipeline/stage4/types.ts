@@ -41,6 +41,8 @@ export interface Stage4aResult {
   generatedAt: string;
   /** Собранные факты. */
   facts: Facts;
+  /** facts.json записан (false при schema_mismatch). */
+  written: boolean;
   /** Предупреждения. */
   warnings: Stage4Warning[];
 }

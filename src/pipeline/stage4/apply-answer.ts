@@ -8,7 +8,7 @@ import type { Answer, Stage4Warning } from "./types";
 const CURRENCIES = ["RUB", "USD", "EUR"] as const;
 
 /**
- * Находит результаты по relatedClaimIds (id или evidence_id).
+ * Находит результаты по relatedClaimIds (id, evidence_id или source_claim_id).
  *
  * @param facts - факты
  * @param question - вопрос
@@ -20,7 +20,11 @@ function findTargets(facts: Facts, question: OpenQuestion): Array<{ jobIndex: nu
 
   facts.jobs.forEach((job, jobIndex) => {
     (job.results ?? []).forEach((result, resultIndex) => {
-      if (wanted.has(result.id) || wanted.has(result.evidence_id)) {
+      if (
+        wanted.has(result.id) ||
+        wanted.has(result.evidence_id) ||
+        (result.source_claim_id !== undefined && wanted.has(result.source_claim_id))
+      ) {
         targets.push({ jobIndex, resultIndex });
       }
     });

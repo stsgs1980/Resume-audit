@@ -4,6 +4,7 @@ import type { Evidence } from "../../schemas/evidence";
 import { evidenceSchema } from "../../schemas/evidence";
 import type { Facts } from "../../schemas/facts";
 import { writeJsonAtomic } from "../../server/storage/files";
+import type { LockState } from "../../server/storage/lock";
 import { canLock } from "../../server/storage/lock";
 
 /**
@@ -84,7 +85,9 @@ export async function tryLock(
     return { locked: false, reasons };
   }
 
-  await writeJsonAtomic(lockPath, { state: "locked", lockedAt: new Date().toISOString() });
+  const locked: LockState = { state: "locked", lockedAt: new Date().toISOString() };
+
+  await writeJsonAtomic(lockPath, locked);
 
   return { locked: true, reasons: [] };
 }

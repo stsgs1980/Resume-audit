@@ -175,6 +175,7 @@ export function buildResults(
       roles: [...roles],
       evidence_id: id,
       hedge_required: false,
+      source_claim_id: claim.id,
     };
     const results = job.results ?? [];
 

@@ -100,14 +100,22 @@ afterEach(async () => {
 });
 
 describe("readLockState / writeLockState", () => {
-  it('по умолчанию "draft"', async () => {
-    expect(await readLockState(config, "ws1")).toBe("draft");
+  it("по умолчанию draft без времени", async () => {
+    expect(await readLockState(config, "ws1")).toEqual({ state: "draft", lockedAt: null });
   });
 
-  it('запись "locked", чтение "locked"', async () => {
-    await writeLockState(config, "ws1", "locked");
+  it("round-trip locked-объекта", async () => {
+    const lockedAt = new Date().toISOString();
 
-    expect(await readLockState(config, "ws1")).toBe("locked");
+    await writeLockState(config, "ws1", { state: "locked", lockedAt });
+
+    expect(await readLockState(config, "ws1")).toEqual({ state: "locked", lockedAt });
+  });
+
+  it("legacy-строка читается как объект без времени", async () => {
+    await writeJsonAtomic(getLockPath(config, "ws1"), "locked");
+
+    expect(await readLockState(config, "ws1")).toEqual({ state: "locked", lockedAt: null });
   });
 
   it("неизвестное значение в файле -> throw", async () => {
