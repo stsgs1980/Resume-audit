@@ -8,6 +8,7 @@
 - **core:** fix gap detection and causality source markers ([76cad40](https://github.com/stsgs1980/Resume-audit/commit/76cad408e3514fae0e1189dbbb0a60b22243c237))
 - **husky:** run lint-staged and file-length check on pre-commit ([717dce4](https://github.com/stsgs1980/Resume-audit/commit/717dce4ed2b9862675f7997bc0008c180544f01e))
 - **pipeline:** block export on forbidden words, placeholders, target metrics ([7dc0fb9](https://github.com/stsgs1980/Resume-audit/commit/7dc0fb93a1d40d639d42b140a50d071f706a1739))
+- **pipeline:** unify lock format, evidence id, and fail-closed facts write ([dbd2b59](https://github.com/stsgs1980/Resume-audit/commit/dbd2b599cbed4060a54dfb98ee510bb26879d60d))
 - repair changelog generation after CLI migration ([4adbbe3](https://github.com/stsgs1980/Resume-audit/commit/4adbbe313ea7117e64d3d341ad9a3ba98881d3fb))
 - **schemas:** strict year-month and job consistency validation ([c02f8bd](https://github.com/stsgs1980/Resume-audit/commit/c02f8bda7c34934e4809bdcd5be445ccfa5f6d98))
 
