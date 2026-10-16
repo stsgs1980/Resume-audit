@@ -44,3 +44,77 @@ export interface Stage4aResult {
   /** Предупреждения. */
   warnings: Stage4Warning[];
 }
+
+/** Данные карточки evidence (ввод кандидата). */
+export interface EvidenceData {
+  /** Файл-источник. */
+  sourceFile: string;
+  /** Дословная цитата. */
+  quote: string;
+  /** Определение метрики. */
+  metricDefinition: string;
+  /** Формула расчёта. */
+  formula: string;
+  /** Период. */
+  period: string;
+  /** Базовое значение. */
+  baseline: string;
+  /** Источник данных. */
+  sourceOfData: string;
+  /** Зона влияния. */
+  zoneOfInfluence: string;
+}
+
+/** Ответ кандидата на вопрос. */
+export interface Answer {
+  /** Id вопроса. */
+  questionId: string;
+  /** Время ответа в ISO 8601. */
+  answeredAt: string;
+  /** Кто ответил. */
+  answeredBy: string;
+  /** Статус ответа. */
+  status: "answered" | "deferred" | "rejected";
+  /** Карточка evidence (для missing_evidence). */
+  evidence?: EvidenceData;
+  /** Свободный текст (для остальных типов). */
+  freeText?: string;
+}
+
+/** Итог этапа 4b. */
+export interface Stage4bResult {
+  /** Отвеченных вопросов. */
+  answersProcessed: number;
+  /** Отложенных. */
+  answersDeferred: number;
+  /** Отклонённых. */
+  answersRejected: number;
+  /** fact_id записанных карточек. */
+  evidenceWritten: string[];
+  /** Удалось ли залочить. */
+  locked: boolean;
+  /** Причины незалочивания. */
+  lockReasons: string[];
+  /** Предупреждения. */
+  warnings: Array<{ code: string; message: string }>;
+}
+
+/** Параметры запуска этапа 4b. */
+export interface Stage4bParams {
+  /** Директория workspace. */
+  workspaceDir: string;
+  /** Путь к audit.json. */
+  auditPath: string;
+  /** Путь к facts.json. */
+  factsPath: string;
+  /** Директория карточек evidence. */
+  evidenceDir: string;
+  /** Путь к lock-файлу. */
+  lockPath: string;
+  /** Директория ответов. */
+  answersPath: string;
+  /** Ввод (по умолчанию readline). */
+  inputFn?: (prompt: string) => Promise<string>;
+  /** Вывод (по умолчанию console.log). */
+  outputFn?: (line: string) => void;
+}
