@@ -28,5 +28,6 @@
 - **pipeline:** add stage 2 claims extraction via LLM ([5a8f352](https://github.com/stsgs1980/Resume-audit/commit/5a8f3528f12d4902ff4271d595567bdb7460d738))
 - **pipeline:** add stage 3a contradictions and open questions ([a32a2cf](https://github.com/stsgs1980/Resume-audit/commit/a32a2cff6a67e103643a6a2040d6f65ce8927e75))
 - **pipeline:** add stage 3b roles assessment and ATS analysis ([b0388c8](https://github.com/stsgs1980/Resume-audit/commit/b0388c89781c25fc11c1ca6189bf9f3ff1e5d6b7))
+- **pipeline:** add stage 4a facts skeleton from claims ([f0bed20](https://github.com/stsgs1980/Resume-audit/commit/f0bed2001760fd6ca73f7c9894925aa9ad416263))
 - **schemas:** add zod schemas for facts, evidence, claims, audit, validation, stage-state ([6f82137](https://github.com/stsgs1980/Resume-audit/commit/6f821373213c9b78f7e0b0518ffdd11a3263d9ac))
 - **server:** add storage layer with workspaces and atomic writes ([b6b0ae3](https://github.com/stsgs1980/Resume-audit/commit/b6b0ae3ed2d6fa5ea5a8936a6dd3d33f6bd59488))
