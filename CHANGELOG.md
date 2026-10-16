@@ -30,5 +30,7 @@
 - **pipeline:** add stage 3b roles assessment and ATS analysis ([b0388c8](https://github.com/stsgs1980/Resume-audit/commit/b0388c89781c25fc11c1ca6189bf9f3ff1e5d6b7))
 - **pipeline:** add stage 4a facts skeleton from claims ([f0bed20](https://github.com/stsgs1980/Resume-audit/commit/f0bed2001760fd6ca73f7c9894925aa9ad416263))
 - **pipeline:** add stage 4b review CLI with evidence and lock ([23a2d09](https://github.com/stsgs1980/Resume-audit/commit/23a2d09d3e6c3d918a5e56237d6182f4b787f903))
+- **pipeline:** add stage 7 resume generation for three roles ([87b2dd0](https://github.com/stsgs1980/Resume-audit/commit/87b2dd03429c911aba7fefbb80d8b9f2d0450f1d))
+- **pipeline:** add stage 8 two-layer verification ([049e1a6](https://github.com/stsgs1980/Resume-audit/commit/049e1a68b90ed239a863ef72f20f4496fbe2878c))
 - **schemas:** add zod schemas for facts, evidence, claims, audit, validation, stage-state ([6f82137](https://github.com/stsgs1980/Resume-audit/commit/6f821373213c9b78f7e0b0518ffdd11a3263d9ac))
 - **server:** add storage layer with workspaces and atomic writes ([b6b0ae3](https://github.com/stsgs1980/Resume-audit/commit/b6b0ae3ed2d6fa5ea5a8936a6dd3d33f6bd59488))
