@@ -1,5 +1,6 @@
-import { parseNumber } from "../../core/numbers";
-import { extractNumbers, verify } from "../../core/verification";
+import type { FactNumber } from "../../core/number-check";
+import { verifyNumbers as checkCoreNumbers } from "../../core/number-check";
+import { verify } from "../../core/verification";
 import type { ResumeResponse } from "../../llm/schemas";
 import type { Facts } from "../../schemas/facts";
 import type { ValidationLayer1 } from "./types";
@@ -23,18 +24,27 @@ function collectNumberText(resume: ResumeResponse): string {
 }
 
 /**
- * Собирает числа фактов: id, значение, роли.
+ * Собирает числа фактов: id, значение, валюта, характер, роли.
+ * Характер выводится из unit: единица с процентом — percent,
+ * иначе — exact (старые факты без процента читаются как exact).
+ * Отсутствующая валюта (старые facts.json) читается как null.
  *
  * @param facts - факты из facts.json
  * @returns числа фактов
  */
-function collectFactsNumbers(facts: Facts): Array<{ factId: string; value: number; roles: string[] }> {
-  const numbers: Array<{ factId: string; value: number; roles: string[] }> = [];
+function collectFactsNumbers(facts: Facts): FactNumber[] {
+  const numbers: FactNumber[] = [];
 
   for (const job of facts.jobs) {
     for (const result of job.results ?? []) {
       if (result.number !== null) {
-        numbers.push({ factId: result.id, value: result.number, roles: result.roles });
+        numbers.push({
+          factId: result.id,
+          value: result.number,
+          currency: result.currency ?? null,
+          qualifier: result.unit.includes("%") ? "percent" : "exact",
+          roles: result.roles,
+        });
       }
     }
   }
@@ -43,8 +53,10 @@ function collectFactsNumbers(facts: Facts): Array<{ factId: string; value: numbe
 }
 
 /**
- * Проверяет числа резюме по фактам и роли. Исключения ядра
- * (телефоны, годы, версии) возвращает отдельно, не ошибками.
+ * Проверяет числа резюме по фактам и роли через ядро.
+ * Исключения ядра (телефоны, годы, версии) возвращает отдельно.
+ * Warning-совпадения ядра (округление, неуказанная валюта)
+ * ошибками не считаются.
  *
  * @param resume - документ резюме
  * @param facts - факты из facts.json
@@ -60,29 +72,9 @@ export function verifyNumbers(
   const factsNumbers = collectFactsNumbers(facts);
   const errors: ValidationLayer1["numberErrors"] = [];
 
-  for (const token of extractNumbers(resumeText)) {
-    const parsed = parseNumber(token);
-
-    if (parsed === null) {
-      errors.push({ number: token, factId: null, reason: "число не распознано" });
-
-      continue;
-    }
-
-    const fact = factsNumbers.find((entry) => entry.value === parsed.value);
-
-    if (fact === undefined) {
-      errors.push({ number: token, factId: null, reason: "unsupported_number: числа нет в facts.json" });
-
-      continue;
-    }
-
-    if (!fact.roles.includes(roleId)) {
-      errors.push({
-        number: token,
-        factId: fact.factId,
-        reason: `wrong_role: число не для роли "${roleId}"`,
-      });
+  for (const checked of checkCoreNumbers(resumeText, factsNumbers, roleId)) {
+    if (!checked.found) {
+      errors.push({ number: checked.number, factId: checked.factId, reason: checked.reason });
     }
   }
 

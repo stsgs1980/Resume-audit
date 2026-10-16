@@ -82,6 +82,14 @@ describe("extractionResponseSchema", () => {
 
     expect(extractionResponseSchema.safeParse(bad).success).toBe(false);
   });
+
+  it("принимает detected_roles и requires_hedge", () => {
+    const extended = {
+      claims: [{ ...minimalExtraction.claims[0], detected_roles: ["salesops"], requires_hedge: true }],
+    };
+
+    expect(extractionResponseSchema.safeParse(extended).success).toBe(true);
+  });
 });
 
 describe("rolesResponseSchema", () => {

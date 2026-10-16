@@ -45,7 +45,15 @@ const makeResume = (about: string, resultText: string): ResumeResponse => {
  * @param results - результаты фактов
  * @returns факты
  */
-const makeFacts = (results: Array<{ id: string; number: number | null; roles: string[] }>): Facts => {
+const makeFacts = (
+  results: Array<{
+    id: string;
+    number: number | null;
+    roles: string[];
+    currency?: "RUB" | "USD" | "EUR" | null;
+    unit?: string;
+  }>,
+): Facts => {
   return {
     schema_version: 1,
     meta: {
@@ -67,8 +75,8 @@ const makeFacts = (results: Array<{ id: string; number: number | null; roles: st
           key: "",
           text: "",
           number: entry.number,
-          unit: "",
-          currency: null,
+          unit: entry.unit ?? "",
+          ...(entry.currency === undefined ? {} : { currency: entry.currency }),
           status: "confirmed",
           roles: entry.roles,
           evidence_id: entry.id,
@@ -126,5 +134,41 @@ describe("verifyNumbers()", () => {
 
     expect(errors).toEqual([]);
     expect(exceptions).toContain("2024");
+  });
+
+  it("4,2 млн USD против факта RUB -> currency_mismatch", () => {
+    const resume = makeResume("", "Выручка выросла на 4,2 млн USD");
+    const facts = makeFacts([{ id: "res1", number: 4200000, roles: ["sales"], currency: "RUB" }]);
+    const { errors } = verifyNumbers(resume, facts, "sales");
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.reason).toContain("currency_mismatch");
+  });
+
+  it("45 % против факта exact 45 -> qualifier_mismatch", () => {
+    const resume = makeResume("", "Доля составила 45 %");
+    const facts = makeFacts([{ id: "res1", number: 45, roles: ["sales"] }]);
+    const { errors } = verifyNumbers(resume, facts, "sales");
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.reason).toContain("qualifier_mismatch");
+  });
+
+  it("два факта value 45, первый чужой роли -> ok", () => {
+    const resume = makeResume("", "Результат 45");
+    const facts = makeFacts([
+      { id: "resA", number: 45, roles: ["salesops"] },
+      { id: "resB", number: 45, roles: ["sales"] },
+    ]);
+
+    expect(verifyNumbers(resume, facts, "sales").errors).toEqual([]);
+  });
+
+  it("старый facts.json без currency: валютное число не блокируется", () => {
+    const resume = makeResume("", "Выручка выросла на 1,2 млн руб");
+    const facts = makeFacts([{ id: "res1", number: 1200000, roles: ["sales"] }]);
+    const { errors } = verifyNumbers(resume, facts, "sales");
+
+    expect(errors).toEqual([]);
   });
 });

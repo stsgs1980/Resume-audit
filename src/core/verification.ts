@@ -7,21 +7,14 @@
  */
 
 import { detectForbiddenWords } from "./detectors";
-import { parseNumber } from "./numbers";
+import type { FactNumber, NumberCheckResult } from "./number-check";
+import { collectExcluded, verifyNumbers } from "./number-check";
 import { normalizeText } from "./skills";
-
-/** Итог проверки одного числа из текста резюме. */
-export interface NumberCheckResult {
-  number: string;
-  found: boolean;
-  factId: string | null;
-  reason: string;
-}
 
 /** Входные данные сквозной проверки. */
 export interface VerificationContext {
   resumeText: string;
-  factsNumbers: Array<{ factId: string; value: number; roles: string[] }>;
+  factsNumbers: FactNumber[];
   resumeSkills: string[];
   confirmedSkills: Array<{ skill: string; roles: string[] }>;
   roleId: string;
@@ -42,107 +35,6 @@ export interface VerificationResult {
   missingFields: string[];
   shareSumOk: boolean;
   exceptions: string[];
-}
-
-/**
- * Делит числовые токены на проверяемые и исключения.
- *
- * Исключения: телефоны +7, версии вида v1, годы 1990-2030 без единиц,
- * номера маркированных списков ("1. ", "2) " в начале строки).
- *
- * @param text - проверяемый текст
- * @returns проверяемые токены и строки исключений
- */
-function collectTokens(text: string): { kept: string[]; excluded: string[] } {
-  const kept: string[] = [];
-  const excluded: string[] = [];
-  const corePattern = /-?\d(?:[\d\s\u00A0\u202F]*\d)?(?:[.,]\d+)?/g;
-  const unitPattern =
-    /^\s*(миллиард\w*|млрд\.?|миллион\w*|млн\.?|тысяч\w*|тысяча|тыс\.?|billion\w*|million\w*|mln\.?|thousand\w*|k\b|%)/i;
-  const masked = text
-    .replace(/\+7(?:[\s()-]*\d){10,}/g, (match) => {
-      excluded.push(match);
-      return " ".repeat(match.length);
-    })
-    .replace(/\bv\d+(?:\.\d+)*/gi, (match) => {
-      excluded.push(match);
-      return " ".repeat(match.length);
-    });
-
-  let match: RegExpExecArray | null;
-
-  while ((match = corePattern.exec(masked)) !== null) {
-    const core = match[0];
-    const unit = unitPattern.exec(masked.slice(match.index + core.length));
-    const token = (core + (unit ? unit[0] : "")).trim();
-    const digitsOnly = core.replace(/[\s\u00A0\u202F]/g, "");
-    const end = match.index + core.length + (unit ? unit[0].length : 0);
-    const nextChar = masked[end] ?? "";
-    const lineStart = masked.lastIndexOf("\n", match.index - 1) + 1;
-    const before = masked.slice(lineStart, match.index);
-    const asYear = Number(digitsOnly);
-    const isYear = unit === null && /^\d{4}$/.test(digitsOnly) && asYear >= 1990 && asYear <= 2030;
-    const isListItem =
-      unit === null && /^\d+$/.test(digitsOnly) && /^\s*$/.test(before) && (nextChar === "." || nextChar === ")");
-
-    if (isYear || isListItem) {
-      excluded.push(token);
-    } else {
-      kept.push(token);
-    }
-  }
-
-  return { kept, excluded };
-}
-
-/**
- * Извлекает числовые токены из текста резюме.
- *
- * Исключения (годы, телефоны, версии, номера списков) не возвращаются.
- *
- * @param text - текст резюме
- * @returns список числовых токенов
- */
-export function extractNumbers(text: string): string[] {
-  return collectTokens(text).kept;
-}
-
-/**
- * Сверяет каждое число текста с фактами и ролью.
- *
- * Число обязано совпасть по значению с factsNumbers, а факт обязан
- * содержать roleId в roles. Возвращает результат по каждому токену,
- * включая совпавшие (found: true).
- *
- * @param text - текст резюме
- * @param factsNumbers - числа фактов с ролями
- * @param roleId - целевая роль
- * @returns результаты проверки по каждому числу
- */
-export function verifyNumbers(
-  text: string,
-  factsNumbers: Array<{ factId: string; value: number; roles: string[] }>,
-  roleId: string,
-): NumberCheckResult[] {
-  return extractNumbers(text).map((token) => {
-    const parsed = parseNumber(token);
-
-    if (parsed === null) {
-      return { number: token, found: false, factId: null, reason: "число не распознано" };
-    }
-
-    const fact = factsNumbers.find((entry) => entry.value === parsed.value);
-
-    if (!fact) {
-      return { number: token, found: false, factId: null, reason: "числа нет в facts.json" };
-    }
-
-    if (!fact.roles.includes(roleId)) {
-      return { number: token, found: false, factId: fact.factId, reason: `число не для роли "${roleId}"` };
-    }
-
-    return { number: token, found: true, factId: fact.factId, reason: "число совпадает с фактом" };
-  });
 }
 
 /**
@@ -226,7 +118,7 @@ export function verify(context: VerificationContext): VerificationResult {
   const hedgeErrors = verifyHedge(context.factIdsWithHedge, context.hedgeRequiredFactIds);
   const missingFields = verifyRequiredFields(context.requiredFields);
   const shareSumOk = verifyShareSum(context.targetShares);
-  const exceptions = collectTokens(context.resumeText).excluded;
+  const exceptions = collectExcluded(context.resumeText);
   const ok =
     numberErrors.length === 0 &&
     skillErrors.length === 0 &&

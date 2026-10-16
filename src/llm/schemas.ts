@@ -27,6 +27,8 @@ export const extractionResponseSchema = z.object({
       currency: llmCurrencySchema,
       status: claimStatusSchema,
       reason: z.string(),
+      detected_roles: z.array(z.string()).optional(),
+      requires_hedge: z.boolean().optional(),
     }),
   ),
 });

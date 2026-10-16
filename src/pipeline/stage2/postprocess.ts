@@ -49,6 +49,8 @@ export function validateAndCleanClaims(rawClaims: RawClaim[], sourceFile: string
       currency: raw.currency,
       status: raw.status,
       reason: raw.reason,
+      detected_roles: raw.detected_roles,
+      requires_hedge: raw.requires_hedge,
     });
     index += 1;
   }

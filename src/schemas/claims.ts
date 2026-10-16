@@ -15,6 +15,8 @@ const claimSchema = z.object({
   currency: currencySchema.optional(),
   status: claimStatusSchema,
   reason: z.string().optional(),
+  detected_roles: z.array(z.string()).optional(),
+  requires_hedge: z.boolean().optional(),
 });
 
 export const claimsSchema = z.object({

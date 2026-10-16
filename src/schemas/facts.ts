@@ -25,7 +25,7 @@ const resultSchema = z.object({
   text: z.string(),
   number: z.number().nullable(),
   unit: z.string(),
-  currency: currencySchema,
+  currency: currencySchema.optional(),
   status: factStatusSchema,
   roles: z.array(z.string()),
   evidence_id: z.string(),

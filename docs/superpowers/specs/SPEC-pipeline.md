@@ -62,6 +62,11 @@
 (fail-closed): при `schema_mismatch` файл не пишется, итог несёт
 `written: false` и ошибки Zod в warnings.
 
+Результаты собираются с per-role allowlist: роли результата — из
+`detected_roles` утверждения (пересечение с целевыми ролями; пусто —
+все целевые), `hedge_required` результата — из `requires_hedge`
+утверждения (по умолчанию `false`).
+
 При возврате приложение показывает «Продолжить с вопроса N из M».
 Частичные ответы сохраняются сразу.
 
@@ -308,6 +313,9 @@ API 2.0.28 не имеет structured output. Мы просим LLM вернут
 tool | education | language | project | link), `metric_type`,
 `number` (или null), `currency` (RUB | USD | EUR или null),
 `status` (confirmed | needs_evidence | remove), `reason`.
+
+Опционально: `detected_roles` (какие роли явно упомянуты в контексте)
+и `requires_hedge` (косвенная метрика — требуется оговорка).
 
 Особенность: `quote` обязателен — утверждение без дословной цитаты
 отбрасывается кодом и не попадает в ответ.

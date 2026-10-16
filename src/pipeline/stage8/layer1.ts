@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { detectForbiddenWords, detectPlaceholders } from "../../core/detectors";
+import { extractNumbers } from "../../core/number-check";
 import { parseNumber } from "../../core/numbers";
-import { extractNumbers, verifyRequiredFields, verifyShareSum, verifySkills } from "../../core/verification";
+import { verifyRequiredFields, verifyShareSum, verifySkills } from "../../core/verification";
 import type { ResumeResponse } from "../../llm/schemas";
 import type { Facts } from "../../schemas/facts";
 import { verifyNumbers } from "./layer1-numbers";

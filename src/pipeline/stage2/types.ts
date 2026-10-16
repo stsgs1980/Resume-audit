@@ -32,6 +32,10 @@ export interface Claim {
   status: ClaimStatus;
   /** Пояснение. */
   reason: string;
+  /** Роли, явно упомянутые в контексте (если есть). */
+  detected_roles?: string[];
+  /** Косвенная метрика: требуется оговорка. */
+  requires_hedge?: boolean;
 }
 
 /** Итог этапа 2. */

@@ -103,4 +103,32 @@ describe("buildResults()", () => {
 
     expect(warnings.length).toBeGreaterThan(0);
   });
+
+  it("detected_roles ограничивают roles результата", () => {
+    const { jobs } = buildJobs([employment()], roles);
+    const { jobs: withResults } = buildResults([resultClaim({ detected_roles: ["salesops"] })], jobs, roles);
+
+    expect(withResults[0]?.results?.[0]?.roles).toEqual(["salesops"]);
+  });
+
+  it("без detected_roles -> все целевые роли", () => {
+    const { jobs } = buildJobs([employment()], roles);
+    const { jobs: withResults } = buildResults([resultClaim()], jobs, roles);
+
+    expect(withResults[0]?.results?.[0]?.roles).toEqual(roles);
+  });
+
+  it("requires_hedge включает hedge_required", () => {
+    const { jobs } = buildJobs([employment()], roles);
+    const { jobs: withResults } = buildResults([resultClaim({ requires_hedge: true })], jobs, roles);
+
+    expect(withResults[0]?.results?.[0]?.hedge_required).toBe(true);
+  });
+
+  it("без requires_hedge -> hedge_required false", () => {
+    const { jobs } = buildJobs([employment()], roles);
+    const { jobs: withResults } = buildResults([resultClaim()], jobs, roles);
+
+    expect(withResults[0]?.results?.[0]?.hedge_required).toBe(false);
+  });
 });

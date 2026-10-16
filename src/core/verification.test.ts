@@ -1,25 +1,117 @@
 import { describe, expect, it } from "vitest";
-import {
-  extractNumbers,
-  verify,
-  verifyHedge,
-  verifyNumbers,
-  verifyRequiredFields,
-  verifyShareSum,
-  verifySkills,
-} from "./verification";
+import { extractNumbers, verifyNumbers } from "./number-check";
+import { verify, verifyHedge, verifyRequiredFields, verifyShareSum, verifySkills } from "./verification";
 
 describe("Test 20: число без факта блокирует", () => {
   it('"7,5 млрд" нет в factsNumbers -> found: false', () => {
     const results = verifyNumbers(
       "выручка 7,5 млрд за год",
-      [{ factId: "f1", value: 4_200_000, roles: ["sales"] }],
+      [{ factId: "f1", value: 4_200_000, currency: null, qualifier: "exact", roles: ["sales"] }],
       "sales",
     );
     const target = results.find((result) => result.number === "7,5 млрд");
 
     expect(target?.found).toBe(false);
     expect(target?.factId).toBeNull();
+  });
+});
+
+describe("verifyNumbers: currency", () => {
+  it("4,2 млн USD против факта RUB -> found: false", () => {
+    const results = verifyNumbers(
+      "сделка 4,2 млн USD",
+      [{ factId: "f1", value: 4_200_000, currency: "RUB", qualifier: "exact", roles: ["sales"] }],
+      "sales",
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.found).toBe(false);
+    expect(results[0]?.reason).toContain("currency_mismatch");
+  });
+
+  it("4,2 млн RUB против факта RUB -> found: true", () => {
+    const results = verifyNumbers(
+      "сделка 4,2 млн RUB",
+      [{ factId: "f1", value: 4_200_000, currency: "RUB", qualifier: "exact", roles: ["sales"] }],
+      "sales",
+    );
+
+    expect(results[0]?.found).toBe(true);
+    expect(results[0]?.factId).toBe("f1");
+  });
+
+  it("у факта currency null -> found с warning", () => {
+    const results = verifyNumbers(
+      "сделка 4,2 млн RUB",
+      [{ factId: "f1", value: 4_200_000, currency: null, qualifier: "exact", roles: ["sales"] }],
+      "sales",
+    );
+
+    expect(results[0]?.found).toBe(true);
+    expect(results[0]?.reason).toContain("валюта");
+  });
+});
+
+describe("verifyNumbers: qualifier", () => {
+  it("45 % против факта exact 45 -> found: false", () => {
+    const results = verifyNumbers(
+      "доля 45 %",
+      [{ factId: "f1", value: 45, currency: null, qualifier: "exact", roles: ["sales"] }],
+      "sales",
+    );
+
+    expect(results[0]?.found).toBe(false);
+    expect(results[0]?.reason).toContain("qualifier_mismatch");
+  });
+
+  it("45 человек против факта exact 45 -> found: true", () => {
+    const results = verifyNumbers(
+      "команда 45 человек",
+      [{ factId: "f1", value: 45, currency: null, qualifier: "exact", roles: ["sales"] }],
+      "sales",
+    );
+
+    expect(results[0]?.found).toBe(true);
+    expect(results[0]?.factId).toBe("f1");
+  });
+
+  it("approx факта против exact токена -> found с округлением", () => {
+    const results = verifyNumbers(
+      "команда 45 человек",
+      [{ factId: "f1", value: 45, currency: null, qualifier: "approx", roles: ["sales"] }],
+      "sales",
+    );
+
+    expect(results[0]?.found).toBe(true);
+    expect(results[0]?.reason).toContain("округление");
+  });
+});
+
+describe("verifyNumbers: filter по ролям", () => {
+  it("два факта value 45, первый чужой роли -> found второго", () => {
+    const results = verifyNumbers(
+      "результат 45",
+      [
+        { factId: "resA", value: 45, currency: null, qualifier: "exact", roles: ["salesops"] },
+        { factId: "resB", value: 45, currency: null, qualifier: "exact", roles: ["sales"] },
+      ],
+      "sales",
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ number: "45", found: true, factId: "resB" });
+  });
+
+  it("совпадение по value, но ни один не для роли -> wrong_role", () => {
+    const results = verifyNumbers(
+      "результат 45",
+      [{ factId: "resA", value: 45, currency: null, qualifier: "exact", roles: ["salesops"] }],
+      "sales",
+    );
+
+    expect(results[0]?.found).toBe(false);
+    expect(results[0]?.factId).toBe("resA");
+    expect(results[0]?.reason).toContain("wrong_role");
   });
 });
 

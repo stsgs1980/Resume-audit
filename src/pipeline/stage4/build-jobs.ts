@@ -132,6 +132,26 @@ export function buildJobs(claims: Claim[], roles: string[]): { jobs: Job[]; warn
 }
 
 /**
+ * Определяет целевые роли результата: пересечение detected_roles
+ * с целями, иначе все целевые (поле отсутствует).
+ *
+ * @param claim - утверждение-результат
+ * @param roles - все целевые роли
+ * @returns роли результата
+ */
+function resolveResultRoles(claim: Claim, roles: string[]): string[] {
+  if (claim.detected_roles !== undefined && claim.detected_roles.length > 0) {
+    const known = claim.detected_roles.filter((role) => roles.includes(role));
+
+    if (known.length > 0) {
+      return known;
+    }
+  }
+
+  return [...roles];
+}
+
+/**
  * Привязывает result-утверждения к работам по совпадению компании.
  *
  * @param claims - утверждения этапа 2
@@ -172,9 +192,9 @@ export function buildResults(
       unit: "",
       currency: claim.currency,
       status: claim.status,
-      roles: [...roles],
+      roles: resolveResultRoles(claim, roles),
       evidence_id: id,
-      hedge_required: false,
+      hedge_required: claim.requires_hedge ?? false,
       source_claim_id: claim.id,
     };
     const results = job.results ?? [];

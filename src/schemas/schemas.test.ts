@@ -131,6 +131,14 @@ describe("schemas accept minimal objects", () => {
     expect(claimsSchema.safeParse(minimalClaims).success).toBe(true);
   });
 
+  it("claimsSchema accepts detected_roles and requires_hedge", () => {
+    const extended = {
+      claims: [{ ...minimalClaims.claims[0], detected_roles: ["salesops"], requires_hedge: true }],
+    };
+
+    expect(claimsSchema.safeParse(extended).success).toBe(true);
+  });
+
   it("auditSchema accepts minimal audit", () => {
     expect(auditSchema.safeParse(minimalAudit).success).toBe(true);
   });
@@ -187,6 +195,25 @@ describe("factsSchema rejects invalid", () => {
 
   it("rejects schema_version != 1", () => {
     expect(factsSchema.safeParse({ ...minimalFacts, schema_version: 2 }).success).toBe(false);
+  });
+});
+
+describe("factsSchema tolerates legacy facts", () => {
+  it("accepts result without currency (старые facts.json)", () => {
+    const result = {
+      id: "res1",
+      key: "",
+      text: "рост выручки",
+      number: 4200000,
+      unit: "руб.",
+      status: "confirmed",
+      roles: ["sales"],
+      evidence_id: "res1",
+      hedge_required: false,
+    };
+    const legacy = factsWithJob({ ...baseJob, results: [result] });
+
+    expect(factsSchema.safeParse(legacy).success).toBe(true);
   });
 });
 
