@@ -1,7 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { claimsSchema } from "../../schemas/claims";
 import type { Facts } from "../../schemas/facts";
 import { factsSchema } from "../../schemas/facts";
-import { writeJsonAtomic } from "../../server/storage/files";
+import { readJson, writeJsonAtomic } from "../../server/storage/files";
 import { loadRoleConfig } from "../stage3/ats";
 import { buildEducation, buildLanguages, buildProjects, buildSkills } from "./build-entities";
 import { buildJobs, buildResults } from "./build-jobs";
@@ -12,15 +12,19 @@ import type { Claim, Stage4aParams, Stage4aResult, Stage4Warning } from "./types
  * Читает утверждения из claims.json.
  *
  * @param claimsPath - путь к claims.json
- * @returns утверждения или []
+ * @returns утверждения и текст ошибки чтения (null при успехе)
  */
-async function loadClaims(claimsPath: string): Promise<Claim[]> {
+async function loadClaims(claimsPath: string): Promise<{ claims: Claim[]; error: string | null }> {
   try {
-    const parsed = JSON.parse(await readFile(claimsPath, "utf8")) as { claims?: unknown };
+    const parsed = await readJson(claimsPath, claimsSchema);
 
-    return Array.isArray(parsed.claims) ? (parsed.claims as Claim[]) : [];
-  } catch {
-    return [];
+    return { claims: parsed.claims, error: null };
+  } catch (error) {
+    if ((error as Error).name === "FileNotFoundError") {
+      return { claims: [], error: null };
+    }
+
+    return { claims: [], error: (error as Error).message };
   }
 }
 
@@ -62,7 +66,13 @@ export async function runStage4a(params: Stage4aParams): Promise<Stage4aResult> 
   const warnings: Stage4Warning[] = [];
 
   try {
-    const claims = await loadClaims(params.claimsPath);
+    const loaded = await loadClaims(params.claimsPath);
+
+    if (loaded.error !== null) {
+      warnings.push({ code: "claims_unreadable", message: loaded.error });
+    }
+
+    const claims = loaded.claims;
     const roleConfig = await loadRoleConfig(params.rolesConfigPath);
     const roles = roleConfig.targets.map((target) => target.id);
 

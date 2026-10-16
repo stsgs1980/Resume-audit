@@ -1,7 +1,9 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import type { Evidence } from "../../schemas/evidence";
 import { evidenceSchema } from "../../schemas/evidence";
 import type { Facts } from "../../schemas/facts";
+import { readJson } from "../../server/storage/files";
 
 /**
  * Строит блок защиты одного результата.
@@ -12,15 +14,10 @@ import type { Facts } from "../../schemas/facts";
  * @returns markdown-блок
  */
 async function buildBlock(factId: string, text: string, evidenceDir: string): Promise<string> {
-  let card: Record<string, string> | null = null;
+  let card: Evidence | null = null;
 
   try {
-    const parsed = JSON.parse(await readFile(join(evidenceDir, `${factId}.json`), "utf8")) as unknown;
-    const validated = evidenceSchema.safeParse(parsed);
-
-    if (validated.success) {
-      card = validated.data as unknown as Record<string, string>;
-    }
+    card = await readJson(join(evidenceDir, `${factId}.json`), evidenceSchema);
   } catch {
     card = null;
   }
@@ -31,14 +28,14 @@ async function buildBlock(factId: string, text: string, evidenceDir: string): Pr
 
   return [
     `## ${factId} — ${text}`,
-    `- Определение метрики: ${card["metric_definition"] ?? ""}`,
-    `- Формула: ${card["formula"] ?? ""}`,
-    `- Период: ${card["period"] ?? ""}`,
-    `- Базовая линия: ${card["baseline"] ?? ""}`,
-    `- Источник данных: ${card["source_of_data"] ?? ""}`,
-    `- Зона влияния: ${card["zone_of_influence"] ?? ""}`,
-    `- Подтверждено: ${card["confirmed_by"] ?? ""}, ${card["confirmed_on"] ?? ""}`,
-    `- Цитата: "${card["quote"] ?? ""}"`,
+    `- Определение метрики: ${card.metric_definition}`,
+    `- Формула: ${card.formula ?? ""}`,
+    `- Период: ${card.period}`,
+    `- Базовая линия: ${card.baseline}`,
+    `- Источник данных: ${card.source_of_data}`,
+    `- Зона влияния: ${card.zone_of_influence}`,
+    `- Подтверждено: ${card.confirmed_by}, ${card.confirmed_on}`,
+    `- Цитата: "${card.quote}"`,
   ].join("\n");
 }
 

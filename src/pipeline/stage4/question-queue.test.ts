@@ -18,7 +18,20 @@ const question = (overrides: Partial<OpenQuestion> = {}): OpenQuestion => ({
 });
 
 const writeAudit = (questions: OpenQuestion[]) =>
-  writeFile(join(dir, "audit.json"), JSON.stringify({ open_questions: questions }), "utf8");
+  writeFile(
+    join(dir, "audit.json"),
+    JSON.stringify({
+      facts_hash: "",
+      meta_hash: "",
+      generated_at: "2026-10-09T12:00:00Z",
+      contradictions: [],
+      open_questions: questions,
+      warnings: [],
+      roles: [],
+      ats: {},
+    }),
+    "utf8",
+  );
 
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), "stage4-queue-"));

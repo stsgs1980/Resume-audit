@@ -1,6 +1,6 @@
-import { readFile } from "node:fs/promises";
 import type { Facts } from "../../schemas/facts";
-import { writeJsonAtomic } from "../../server/storage/files";
+import { factsSchema } from "../../schemas/facts";
+import { readJson, writeJsonAtomic } from "../../server/storage/files";
 import type { OpenQuestion } from "../stage3/types";
 import type { Answer, Stage4Warning } from "./types";
 
@@ -70,7 +70,7 @@ export async function applyAnswer(
     return { factsChanged: false, warnings };
   }
 
-  const facts = JSON.parse(await readFile(factsPath, "utf8")) as Facts;
+  const facts = await readJson(factsPath, factsSchema);
   const targets = findTargets(facts, question);
 
   if (targets.length === 0) {

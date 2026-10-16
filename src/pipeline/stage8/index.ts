@@ -1,13 +1,21 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
+import { z } from "zod";
 import type { ResumeResponse } from "../../llm/schemas";
 import type { Facts } from "../../schemas/facts";
-import { writeJsonAtomic } from "../../server/storage/files";
+import { factsSchema } from "../../schemas/facts";
+import type { StageState } from "../../schemas/stage-state";
+import { stageStateSchema } from "../../schemas/stage-state";
+import { validationSchema } from "../../schemas/validation";
+import { readJson, writeJsonAtomic } from "../../server/storage/files";
 import { hashFacts } from "../../server/storage/hash";
 import { computeBlockReason, isBlocked } from "./block";
 import { verifyLayer1 } from "./layer1";
 import { verifyLayer2 } from "./layer2";
 import type { Stage8Params, Stage8Result, ValidationResult } from "./types";
+
+/** Схема чтения lock-файла: новый объект или legacy-строка. */
+const lockReadSchema = z.union([z.string(), z.record(z.string(), z.unknown())]);
 
 /**
  * Проверяет блокировку facts.json.
@@ -17,8 +25,8 @@ import type { Stage8Params, Stage8Result, ValidationResult } from "./types";
  */
 async function isLocked(lockPath: string): Promise<boolean> {
   try {
-    const parsed = JSON.parse(await readFile(lockPath, "utf8")) as unknown;
-    const state = typeof parsed === "string" ? parsed : (parsed as Record<string, unknown>)["state"];
+    const parsed = await readJson(lockPath, lockReadSchema);
+    const state = typeof parsed === "string" ? parsed : parsed["state"];
 
     return state === "locked";
   } catch {
@@ -63,10 +71,10 @@ function extractDocument(parsed: Record<string, unknown>): ResumeResponse | null
  */
 async function updateStageState(validationDir: string, validated: ValidationResult[]): Promise<void> {
   const stageStatePath = join(dirname(validationDir), "stage-state.json");
-  let state: { run_id: string; stages: Record<string, unknown>; documents: Record<string, unknown> };
+  let state: StageState;
 
   try {
-    state = JSON.parse(await readFile(stageStatePath, "utf8")) as typeof state;
+    state = await readJson(stageStatePath, stageStateSchema);
   } catch {
     state = { run_id: "", stages: {}, documents: {} };
   }
@@ -107,7 +115,7 @@ export async function runStage8(params: Stage8Params): Promise<Stage8Result> {
   let facts: Facts;
 
   try {
-    facts = JSON.parse(await readFile(params.factsPath, "utf8")) as Facts;
+    facts = await readJson(params.factsPath, factsSchema);
   } catch (error) {
     result.errors.push({ versionId: "", reason: (error as Error).message });
 
@@ -131,7 +139,7 @@ export async function runStage8(params: Stage8Params): Promise<Stage8Result> {
     const versionId = basename(name, ".json");
 
     try {
-      const parsed = JSON.parse(await readFile(join(params.resumesDir, name), "utf8")) as Record<string, unknown>;
+      const parsed = await readJson(join(params.resumesDir, name), z.record(z.string(), z.unknown()));
       const document = extractDocument(parsed);
       const roleId = extractRoleId(parsed, versionId);
 
@@ -172,8 +180,19 @@ export async function runStage8(params: Stage8Params): Promise<Stage8Result> {
         blockReasons,
       };
 
-      await writeJsonAtomic(join(params.validationDir, `${versionId}.json`), entry);
-      result.validated.push(entry);
+      const validatedEntry = validationSchema.safeParse(entry);
+
+      if (!validatedEntry.success) {
+        result.warnings.push({
+          code: "validation_schema_mismatch",
+          message: `${versionId}: ${JSON.stringify(validatedEntry.error.issues)}`,
+        });
+
+        continue;
+      }
+
+      await writeJsonAtomic(join(params.validationDir, `${versionId}.json`), validatedEntry.data);
+      result.validated.push(validatedEntry.data);
     } catch (error) {
       result.errors.push({ versionId, reason: (error as Error).message });
     }

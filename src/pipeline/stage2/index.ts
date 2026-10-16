@@ -1,7 +1,8 @@
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { savePartialResponse } from "../../llm/checkpoint";
-import { writeJsonAtomic } from "../../server/storage/files";
+import { claimsSchema } from "../../schemas/claims";
+import { filesSchema } from "../../schemas/files";
+import { readJson, writeJsonAtomic } from "../../server/storage/files";
 import { readAnyFile } from "../stage1/read-file";
 import type { FileEntry } from "../stage1/types";
 import { chunkText, needsChunking } from "./chunk";
@@ -91,26 +92,17 @@ export async function runStage2(params: Stage2Params): Promise<ClaimsResult> {
   };
   const collected: Claim[] = [];
   let nextId = 1;
-  let parsed: { rootDir?: unknown; files?: unknown };
+  let parsed: { rootDir: string; files: FileEntry[] };
 
   try {
-    parsed = JSON.parse(await readFile(params.filesPath, "utf8")) as {
-      rootDir?: unknown;
-      files?: unknown;
-    };
+    parsed = await readJson(params.filesPath, filesSchema);
   } catch (error) {
     result.errors.push({ file: params.filesPath, reason: (error as Error).message });
 
     return result;
   }
 
-  if (typeof parsed.rootDir !== "string" || !Array.isArray(parsed.files)) {
-    result.errors.push({ file: params.filesPath, reason: "files.json имеет неверную форму" });
-
-    return result;
-  }
-
-  const entries = parsed.files as FileEntry[];
+  const entries = parsed.files;
   const limited = params.maxFilesToProcess === undefined ? entries : entries.slice(0, params.maxFilesToProcess);
 
   for (const entry of limited) {
@@ -148,10 +140,21 @@ export async function runStage2(params: Stage2Params): Promise<ClaimsResult> {
     result.warnings.push("Ни одного утверждения не извлечено");
   }
 
-  try {
-    await writeJsonAtomic(params.claimsPath, result);
-  } catch (error) {
-    result.errors.push({ file: params.claimsPath, reason: (error as Error).message });
+  const validated = claimsSchema.safeParse({ claims: result.claims });
+
+  if (!validated.success) {
+    result.errors.push({
+      file: params.claimsPath,
+      reason: `claims.json не прошёл схему: ${JSON.stringify(validated.error.issues)}`,
+    });
+  } else {
+    result.claims = validated.data.claims;
+
+    try {
+      await writeJsonAtomic(params.claimsPath, result);
+    } catch (error) {
+      result.errors.push({ file: params.claimsPath, reason: (error as Error).message });
+    }
   }
 
   return result;

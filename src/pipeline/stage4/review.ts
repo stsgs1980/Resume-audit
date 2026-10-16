@@ -1,7 +1,6 @@
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
-import type { Facts } from "../../schemas/facts";
+import { factsSchema } from "../../schemas/facts";
 import { stageStateSchema } from "../../schemas/stage-state";
 import { readJson, writeJsonAtomic } from "../../server/storage/files";
 import type { OpenQuestion } from "../stage3/types";
@@ -73,7 +72,7 @@ async function collectEvidence(
  */
 async function loadResults(factsPath: string): Promise<JobResult[]> {
   try {
-    const facts = JSON.parse(await readFile(factsPath, "utf8")) as Facts;
+    const facts = await readJson(factsPath, factsSchema);
 
     return facts.jobs.flatMap((job) => job.results ?? []);
   } catch {

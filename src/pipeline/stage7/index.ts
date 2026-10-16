@@ -1,7 +1,9 @@
-import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { Facts } from "../../schemas/facts";
-import { writeJsonAtomic } from "../../server/storage/files";
+import { factsSchema } from "../../schemas/facts";
+import type { StageState } from "../../schemas/stage-state";
+import { stageStateSchema } from "../../schemas/stage-state";
+import { readJson, writeJsonAtomic } from "../../server/storage/files";
 import { buildDefenseDocument, writeDefenseDocument } from "./build-defense";
 import { ensureLocked } from "./check-lock";
 import { generateForRole } from "./generate-one";
@@ -12,16 +14,6 @@ import type { GeneratedResume, GenerationRoleId, Stage7Params, Stage7Result } fr
 const ALL_ROLES: GenerationRoleId[] = ["sales", "salesops", "aipo"];
 
 /**
- * Читает facts.json.
- *
- * @param factsPath - путь к facts.json
- * @returns факты
- */
-async function readFacts(factsPath: string): Promise<Facts> {
-  return JSON.parse(await readFile(factsPath, "utf8")) as Facts;
-}
-
-/**
  * Обновляет stage-state.json записями документов.
  *
  * @param resumesDir - директория версий (stage-state рядом, на уровень выше)
@@ -29,10 +21,10 @@ async function readFacts(factsPath: string): Promise<Facts> {
  */
 async function updateStageState(resumesDir: string, generated: GeneratedResume[]): Promise<void> {
   const stageStatePath = join(dirname(resumesDir), "stage-state.json");
-  let state: { run_id: string; stages: Record<string, unknown>; documents: Record<string, unknown> };
+  let state: StageState;
 
   try {
-    state = JSON.parse(await readFile(stageStatePath, "utf8")) as typeof state;
+    state = await readJson(stageStatePath, stageStateSchema);
   } catch {
     state = { run_id: "", stages: {}, documents: {} };
   }
@@ -77,7 +69,7 @@ export async function runStage7(params: Stage7Params): Promise<Stage7Result> {
   let facts: Facts;
 
   try {
-    facts = await readFacts(params.factsPath);
+    facts = await readJson(params.factsPath, factsSchema);
   } catch (error) {
     result.errors.push({ roleId: "", reason: (error as Error).message });
 

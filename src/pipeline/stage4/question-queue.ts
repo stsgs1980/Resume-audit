@@ -1,6 +1,8 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { writeJsonAtomic } from "../../server/storage/files";
+import { z } from "zod";
+import { auditSchema } from "../../schemas/audit";
+import { readJson, writeJsonAtomic } from "../../server/storage/files";
 import type { OpenQuestion } from "../stage3/types";
 import type { Answer } from "./types";
 
@@ -12,9 +14,9 @@ import type { Answer } from "./types";
  */
 export async function loadQuestions(auditPath: string): Promise<OpenQuestion[]> {
   try {
-    const parsed = JSON.parse(await readFile(auditPath, "utf8")) as { open_questions?: unknown };
+    const parsed = await readJson(auditPath, auditSchema);
 
-    return Array.isArray(parsed.open_questions) ? (parsed.open_questions as OpenQuestion[]) : [];
+    return parsed.open_questions;
   } catch {
     return [];
   }
@@ -34,13 +36,9 @@ async function readAnsweredIds(answersPath: string): Promise<Set<string>> {
     for (const name of names) {
       if (name.endsWith(".json")) {
         try {
-          const parsed = JSON.parse(await readFile(join(answersPath, name), "utf8")) as {
-            questionId?: unknown;
-          };
+          const parsed = await readJson(join(answersPath, name), z.object({ questionId: z.string() }));
 
-          if (typeof parsed.questionId === "string") {
-            ids.add(parsed.questionId);
-          }
+          ids.add(parsed.questionId);
         } catch {
           // Битый ответ — как будто его нет.
         }

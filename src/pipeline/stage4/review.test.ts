@@ -58,7 +58,20 @@ const question = (overrides: Partial<OpenQuestion> = {}): OpenQuestion => ({
 
 const setup = async (questions: OpenQuestion[]) => {
   await writeFile(join(dir, "facts.json"), JSON.stringify(facts()), "utf8");
-  await writeFile(join(dir, "audit.json"), JSON.stringify({ open_questions: questions }), "utf8");
+  await writeFile(
+    join(dir, "audit.json"),
+    JSON.stringify({
+      facts_hash: "",
+      meta_hash: "",
+      generated_at: "2026-10-09T12:00:00Z",
+      contradictions: [],
+      open_questions: questions,
+      warnings: [],
+      roles: [],
+      ats: {},
+    }),
+    "utf8",
+  );
 };
 
 const params = (inputs: string[], output: string[]): Stage4bParams => ({

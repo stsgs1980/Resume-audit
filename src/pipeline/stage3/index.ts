@@ -1,5 +1,6 @@
-import { readFile } from "node:fs/promises";
-import { writeJsonAtomic } from "../../server/storage/files";
+import { auditSchema } from "../../schemas/audit";
+import { claimsSchema } from "../../schemas/claims";
+import { readJson, writeJsonAtomic } from "../../server/storage/files";
 import { detectDateContradictions, detectDurationMismatch, detectGaps } from "./date-check";
 import { crossCheckClaims } from "./number-check";
 import { detectParallelRoles, detectSkillConflicts } from "./overlap-check";
@@ -20,15 +21,19 @@ import type {
  * Загружает claims из файла (запасной источник при пустом входе).
  *
  * @param claimsPath - путь к claims.json
- * @returns утверждения или []
+ * @returns утверждения и текст ошибки чтения (null при успехе)
  */
-async function loadClaimsFile(claimsPath: string): Promise<Claim[]> {
+async function loadClaimsFile(claimsPath: string): Promise<{ claims: Claim[]; error: string | null }> {
   try {
-    const parsed = JSON.parse(await readFile(claimsPath, "utf8")) as { claims?: unknown };
+    const parsed = await readJson(claimsPath, claimsSchema);
 
-    return Array.isArray(parsed.claims) ? (parsed.claims as Claim[]) : [];
-  } catch {
-    return [];
+    return { claims: parsed.claims, error: null };
+  } catch (error) {
+    if ((error as Error).name === "FileNotFoundError") {
+      return { claims: [], error: null };
+    }
+
+    return { claims: [], error: (error as Error).message };
   }
 }
 
@@ -49,7 +54,14 @@ export async function runStage3a(params: Stage3aParams): Promise<Stage3aResult> 
   };
 
   try {
-    const claims = params.claims.length > 0 ? params.claims : await loadClaimsFile(params.claimsPath);
+    const loaded =
+      params.claims.length > 0 ? { claims: params.claims, error: null } : await loadClaimsFile(params.claimsPath);
+
+    if (loaded.error !== null) {
+      fail("claims_unreadable", loaded.error);
+    }
+
+    const claims = loaded.claims;
 
     const contradictions: Contradiction[] = [
       ...crossCheckClaims(claims),
@@ -82,19 +94,25 @@ export async function runStage3a(params: Stage3aParams): Promise<Stage3aResult> 
       counts: { contradictions: contradictions.length, openQuestions: openQuestions.length },
     };
 
-    try {
-      await writeJsonAtomic(params.auditPath, {
-        facts_hash: "",
-        meta_hash: "",
-        generated_at: result.generatedAt,
-        contradictions,
-        open_questions: openQuestions,
-        warnings: warnings.map((warning) => ({ ...warning, code: warning.kind })),
-        roles: [],
-        ats: {},
-      });
-    } catch (error) {
-      fail("stage3_error", (error as Error).message);
+    const audit = auditSchema.safeParse({
+      facts_hash: "",
+      meta_hash: "",
+      generated_at: result.generatedAt,
+      contradictions,
+      open_questions: openQuestions,
+      warnings: warnings.map((warning) => ({ ...warning, code: warning.kind })),
+      roles: [],
+      ats: {},
+    });
+
+    if (!audit.success) {
+      fail("audit_schema_mismatch", JSON.stringify(audit.error.issues));
+    } else {
+      try {
+        await writeJsonAtomic(params.auditPath, audit.data);
+      } catch (error) {
+        fail("stage3_error", (error as Error).message);
+      }
     }
 
     return result;
@@ -144,17 +162,27 @@ export async function runStage3(params: Stage3Params): Promise<AuditResult> {
     ats: stage3b.ats,
   };
 
-  try {
-    await writeJsonAtomic(params.auditPath, {
-      ...result,
-      warnings: warnings.map((warning) => ({ ...warning, code: warning.kind })),
-    });
-  } catch (error) {
+  const audit = auditSchema.safeParse({
+    ...result,
+    warnings: warnings.map((warning) => ({ ...warning, code: warning.kind })),
+  });
+
+  if (!audit.success) {
     warnings.push({
       id: `warn${warnings.length + 1}`,
-      kind: "stage3_error",
-      message: (error as Error).message,
+      kind: "audit_schema_mismatch",
+      message: JSON.stringify(audit.error.issues),
     });
+  } else {
+    try {
+      await writeJsonAtomic(params.auditPath, audit.data);
+    } catch (error) {
+      warnings.push({
+        id: `warn${warnings.length + 1}`,
+        kind: "stage3_error",
+        message: (error as Error).message,
+      });
+    }
   }
 
   return { ...result, warnings };

@@ -1,9 +1,10 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { Evidence } from "../../schemas/evidence";
 import { evidenceSchema } from "../../schemas/evidence";
 import type { Facts } from "../../schemas/facts";
-import { writeJsonAtomic } from "../../server/storage/files";
+import { factsSchema } from "../../schemas/facts";
+import { readJson, writeJsonAtomic } from "../../server/storage/files";
 import type { LockState } from "../../server/storage/lock";
 import { canLock } from "../../server/storage/lock";
 
@@ -30,12 +31,7 @@ async function readEvidenceCards(evidenceDir: string): Promise<Evidence[]> {
     }
 
     try {
-      const parsed = JSON.parse(await readFile(join(evidenceDir, name), "utf8")) as unknown;
-      const validated = evidenceSchema.safeParse(parsed);
-
-      if (validated.success) {
-        cards.push(validated.data);
-      }
+      cards.push(await readJson(join(evidenceDir, name), evidenceSchema));
     } catch {
       // Битые карточки пропускаются.
     }
@@ -70,7 +66,7 @@ export async function tryLock(
   let facts: Facts;
 
   try {
-    facts = JSON.parse(await readFile(factsPath, "utf8")) as Facts;
+    facts = await readJson(factsPath, factsSchema);
   } catch (error) {
     return { locked: false, reasons: [...reasons, `facts unreadable: ${(error as Error).message}`] };
   }

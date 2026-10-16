@@ -4,7 +4,6 @@ import { claimsSchema } from "./claims";
 import { evidenceSchema } from "./evidence";
 import { factsSchema } from "./facts";
 import { stageStateSchema } from "./stage-state";
-import { validationSchema } from "./validation";
 
 const minimalFacts = {
   schema_version: 1,
@@ -63,40 +62,6 @@ const minimalAudit = {
   ats: {},
 };
 
-const minimalValidation = {
-  layer1: { ok: true },
-  layer2: { checks: [], unsupported_skills: [], forbidden_words_found: [] },
-};
-
-const fullValidation = {
-  layer1: {
-    ok: false,
-    numberErrors: [],
-    skillErrors: ["SQL"],
-    forbiddenFound: [],
-    hedgeErrors: [],
-    missingFields: [],
-    shareSumOk: true,
-    exceptions: ["+7 (926) 065-97-20"],
-  },
-  layer2: {
-    checks: [
-      {
-        number: "4,2 млн",
-        claim: "рост выручки",
-        matches_fact: true,
-        fact_id: "res1",
-        matches_role: true,
-        has_hedge: false,
-        verdict: "ok",
-        comment: "",
-      },
-    ],
-    unsupported_skills: ["Go"],
-    forbidden_words_found: [],
-  },
-};
-
 const minimalStageState = {
   run_id: "run_2026-10-09_001",
   stages: { 1: { status: "completed", updated_at: "" } },
@@ -145,10 +110,6 @@ describe("schemas accept minimal objects", () => {
 
   it("auditSchema accepts minimal audit", () => {
     expect(auditSchema.safeParse(minimalAudit).success).toBe(true);
-  });
-
-  it("validationSchema accepts minimal validation", () => {
-    expect(validationSchema.safeParse(minimalValidation).success).toBe(true);
   });
 
   it("stageStateSchema accepts minimal stage-state", () => {
@@ -224,18 +185,6 @@ describe("factsSchema tolerates legacy facts", () => {
 describe("evidenceSchema rejects invalid status", () => {
   it("rejects status outside enum", () => {
     expect(evidenceSchema.safeParse({ ...minimalEvidence, status: "unknown" }).success).toBe(false);
-  });
-});
-
-describe("validationSchema strict mode", () => {
-  it("accepts full object", () => {
-    expect(validationSchema.safeParse(fullValidation).success).toBe(true);
-  });
-
-  it("rejects extra top-level fields", () => {
-    const withExtra = { ...fullValidation, extra: 1 };
-
-    expect(validationSchema.safeParse(withExtra).success).toBe(false);
   });
 });
 

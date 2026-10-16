@@ -245,19 +245,57 @@ data/
   "facts_hash": "sha256:...",
   "meta_hash": "sha256:...",
   "generated_at": "YYYY-MM-DDTHH:MM:SSZ",
-  "contradictions": [{ "id": "c1", "description": "" }],
-  "open_questions": [{ "id": "q1", "question": "", "status": "" }],
-  "warnings": [{ "code": "", "message": "" }],
-  "roles": [{ "role_id": "sales", "verdict": "", "score": 0 }],
-  "ats": { "<keyword>": {} }
+  "contradictions": [
+    {
+      "id": "contradiction1",
+      "kind": "number_mismatch | date_mismatch | duration_mismatch | skill_conflict",
+      "severity": "warning | hard",
+      "factIds": ["claim1"],
+      "description": "",
+      "evidence": ["цитата"]
+    }
+  ],
+  "open_questions": [
+    {
+      "id": "q_001",
+      "type": "missing_evidence | contradiction | ambiguous_date | parallel_roles | gap | currency_missing | target_vs_measured | skill_usage | other",
+      "question": "",
+      "context": "",
+      "relatedClaimIds": ["claim1"],
+      "createdFrom": "audit#gap"
+    }
+  ],
+  "warnings": [{ "id": "warn1", "kind": "claims_unreadable", "code": "claims_unreadable", "message": "" }],
+  "roles": [
+    {
+      "roleId": "sales",
+      "scores": {
+        "experience_fit": 0,
+        "responsibility_level": 0,
+        "measurable_results": 0,
+        "keyword_fit": 0,
+        "hr_screen": 0,
+        "hiring_manager": 0
+      },
+      "total": 0,
+      "strengths": [],
+      "gaps": [],
+      "overpositioningRisk": 0,
+      "recommendation": ""
+    }
+  ],
+  "ats": { "roleId": "sales" }
 }
 ```
 
-Источник правды — `src/schemas/audit.ts`. `contradiction` — это
-`{ id, description }`; `open_question` — `{ id, question }` плюс
-опциональный `status`; `warning` — `{ code, message }`;
-`roleAssessment` — `{ role_id }` плюс опциональные `verdict`, `score`.
-`ats` — свободная запись `record<string, unknown>`, а не фиксированная
+Источник правды — `src/schemas/audit.ts`. Формы записи: `contradiction`
+(`id`, `kind`, `severity`, `factIds`, `description`, `evidence`);
+`open_question` (`id`, `type`, `question`, `context`, `relatedClaimIds`,
+`createdFrom`) плюс опциональный `status`; `warning` (`id`, `kind`,
+`code`, `message`); `roleAssessment` — camelCase-форма ответа LLM
+(`roleId`, `scores`, `total`, `strengths`, `gaps`,
+`overpositioningRisk`, `recommendation`). `ats` — свободная запись
+`record<string, unknown>` или `null` (этап 3b упал), а не фиксированная
 структура.
 
 ## 11. Схема stage-state.json
@@ -301,18 +339,26 @@ data/
 
 ## 12. Схема validation.json
 
-Результат этапа 8. Два вложенных объекта: `layer1` (код)
-и `layer2` (LLM). Верхний уровень строгий: лишние поля отклоняются.
+Результат этапа 8. Один файл `validation/<versionId>.json` на версию
+резюме. Верхний уровень строгий: лишние поля отклоняются.
 
 ```json
 {
+  "versionId": "hh_v1_sales",
+  "roleId": "sales",
+  "validatedAt": "YYYY-MM-DDTHH:MM:SSZ",
+  "factsHash": "sha256:...",
+  "promptVersion": "verification.v1 | null",
+  "modelId": "opencode/big-pickle | null",
   "layer1": {
-    "ok": false,
     "numberErrors": [],
     "skillErrors": ["SQL"],
     "forbiddenFound": [],
+    "placeholdersFound": [],
+    "titleOk": true,
+    "requiredFieldsMissing": [],
     "hedgeErrors": [],
-    "missingFields": [],
+    "targetMetricsInResults": [],
     "shareSumOk": true,
     "exceptions": ["+7 (926) 065-97-20"]
   },
@@ -321,26 +367,29 @@ data/
       {
         "number": "4,2 млн",
         "claim": "рост выручки",
-        "matches_fact": true,
-        "fact_id": "res1",
-        "matches_role": true,
-        "has_hedge": false,
+        "matchesFact": true,
+        "factId": "res1",
+        "matchesRole": true,
+        "hasHedge": false,
         "verdict": "ok",
         "comment": ""
       }
     ],
-    "unsupported_skills": ["Go"],
-    "forbidden_words_found": []
-  }
+    "unsupportedSkills": ["Go"],
+    "forbiddenWordsFound": []
+  },
+  "blocked": false,
+  "blockReasons": []
 }
 ```
 
-Источник правды — `src/schemas/validation.ts`. Форма `layer1`
-повторяет `VerificationResult` из `src/core/verification.ts`:
-обязателен только `ok: boolean`, остальные списки опциональны.
-Форма `layer2` — из [SPEC-verification.md](SPEC-verification.md),
-раздел 3; `verdict` — `ok | unsupported_number | wrong_role |
-missing_hedge | is_target_metric`.
+Источник правды — `src/schemas/validation.ts`. `layer1` — полный набор
+полей детерминированного слоя; `layer2` — camelCase-форма после
+маппинга ответа LLM, `null` если слой 2 не выполнялся или упал
+(см. [SPEC-verification.md](SPEC-verification.md), раздел 3);
+`verdict` — `ok | unsupported_number | wrong_role | missing_hedge |
+is_target_metric`; `blocked` и `blockReasons` — итог fail-closed
+проверки экспорта.
 
 Долг, не финал: точная форма `layer1` может уточниться при развитии
 верификации (новые виды проверок — новые поля). При изменении —
@@ -356,6 +405,17 @@ missing_hedge | is_target_metric`.
 - `share_of_applications` — проверка суммы.
 - Ошибки валидации показываются у конкретного поля, не общим текстом.
 - Запись атомарная: временный файл, затем `rename`.
+
+Чтение артефактов конвейером идёт только через `readJson(path, schema)`
+из `src/server/storage/files.ts`; сырой `JSON.parse` без схемы
+запрещён. Битый JSON и несоответствие схеме наружу не бросаются —
+этап фиксирует предупреждение и продолжает с пустым результатом
+(отсутствие файла — молчаливый пустой результат).
+
+Записи конвейера тоже валидируются схемами перед сохранением:
+`claims.json` — `claimsSchema`, `audit.json` — `auditSchema`,
+`validation/<versionId>.json` — `validationSchema`. Не прошедшие
+схему данные на диск не попадают, этап фиксирует warning/error.
 
 ## 14. Версионирование артефактов
 

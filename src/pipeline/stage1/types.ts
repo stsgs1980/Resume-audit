@@ -1,27 +1,6 @@
-/** Вид исходного файла. */
-export type FileKind =
-  "hh_export" | "resume_draft" | "vacancy" | "flagged_synthetic" | "ai_inflated" | "technical_audit" | "unknown";
+import type { FileEntry } from "../../schemas/files";
 
-/** Статус чтения файла. */
-export type FileStatus = "ok" | "unreadable" | "unsupported";
-
-/** Запись инвентаря об одном файле. */
-export interface FileEntry {
-  /** Относительный путь в исходной директории. */
-  path: string;
-  /** Имя файла. */
-  name: string;
-  /** Классификация. */
-  kind: FileKind;
-  /** Статус чтения. */
-  status: FileStatus;
-  /** Кодировка текста или null для бинарных. */
-  encoding: string | null;
-  /** Предупреждения по файлу. */
-  warnings: string[];
-  /** Размер в байтах. */
-  size: number;
-}
+export type { FileEntry, FileKind, FileStatus } from "../../schemas/files";
 
 /** Итог этапа 1. */
 export interface Stage1Result {

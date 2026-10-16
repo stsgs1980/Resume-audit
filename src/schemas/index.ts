@@ -6,6 +6,8 @@ export { evidenceSchema } from "./evidence";
 export type { Evidence } from "./evidence";
 export { factsSchema } from "./facts";
 export type { Facts } from "./facts";
+export { fileEntrySchema, filesSchema } from "./files";
+export type { FileEntry, FileKind, FileStatus, Files } from "./files";
 export { stageStateSchema } from "./stage-state";
 export type { StageState } from "./stage-state";
 export { validationSchema } from "./validation";
