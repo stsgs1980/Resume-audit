@@ -40,7 +40,7 @@
 ## Features
 
 - **8 этапов конвейера**: файлы → факты → аудит → вопросы → роли → ATS →
-  генерация → верификация.
+  генерация → верификация. Готовы этапы 1–3 [OK], этапы 4–8 [TODO].
 - **Источник правды**: `facts.json` содержит только подтверждённые факты.
   Стаж, доли и производные — вычисляются.
 - **Человек в цикле**: этап 4 — очередь вопросов с карточками `evidence`,
@@ -155,7 +155,7 @@ npm run dev
 | `npm run lint:md`           | markdownlint                          |
 | `npm run format`            | Prettier (запись)                     |
 | `npm run format:check`      | Prettier (проверка, как в CI)         |
-| `npm test`                  | Vitest (154 теста)                    |
+| `npm test`                  | Vitest (319 тестов)                   |
 | `npm run test:watch`        | Vitest (watch)                        |
 | `npm run test:coverage`     | Vitest + coverage                     |
 | `npm run check:file-length` | Проверка длины файлов (лимит 250)     |
