@@ -3,6 +3,7 @@ import { monthsInclusive, parseYearMonth } from "../../core/dates";
 import type { ResolvedInterval } from "../../core/experience";
 import { resolvePresent } from "../../core/experience";
 import { findGaps } from "../../core/interval-analysis";
+import { detectClaimCompany } from "./company";
 import type { Claim, Contradiction, OpenQuestion } from "./types";
 
 /** Даты вида YYYY-MM в тексте. */
@@ -53,50 +54,54 @@ export function extractEmploymentIntervals(claims: Claim[]): ResolvedInterval[] 
 }
 
 /**
- * Значимые слова формулировки для сопоставления компаний.
- *
- * @param statement - формулировка утверждения
- * @returns слова длиной 4+ в нижнем регистре
- */
-function companyWords(statement: string): string[] {
-  return (statement.toLowerCase().match(/[a-zа-яё]+/g) ?? []).filter((word) => word.length >= 4);
-}
-
-/**
  * Ищет пары employment-утверждений одной компании с разными датами.
+ * Компания извлекается из текста явно; утверждения без компании
+ * не участвуют — общие слова компанией не считаются.
  *
  * @param claims - утверждения этапа 2
  * @returns противоречия вида date_mismatch
  */
 export function detectDateContradictions(claims: Claim[]): Contradiction[] {
   const dated = claims.filter((claim) => claim.category === "employment" && extractDates(claim).length > 0);
+  const byCompany = new Map<string, Claim[]>();
+
+  for (const claim of dated) {
+    const company = detectClaimCompany(claim);
+
+    if (company === null) {
+      continue;
+    }
+
+    const key = company.toLowerCase();
+    const group = byCompany.get(key) ?? [];
+
+    group.push(claim);
+    byCompany.set(key, group);
+  }
+
   const contradictions: Contradiction[] = [];
 
-  for (let index = 0; index < dated.length; index += 1) {
-    for (let other = index + 1; other < dated.length; other += 1) {
-      const first = dated[index] as Claim;
-      const second = dated[other] as Claim;
-      const shared = companyWords(first.statement).some((word) => companyWords(second.statement).includes(word));
+  for (const group of byCompany.values()) {
+    for (let index = 0; index < group.length; index += 1) {
+      for (let other = index + 1; other < group.length; other += 1) {
+        const first = group[index] as Claim;
+        const second = group[other] as Claim;
+        const firstDates = extractDates(first).map((date) => `${date.year}-${date.month}`);
+        const secondDates = extractDates(second).map((date) => `${date.year}-${date.month}`);
 
-      if (!shared) {
-        continue;
+        if (firstDates.join() === secondDates.join()) {
+          continue;
+        }
+
+        contradictions.push({
+          id: "",
+          kind: "date_mismatch",
+          severity: "warning",
+          factIds: [first.id, second.id],
+          description: `Разные даты одного места работы: ${firstDates.join(", ")} против ${secondDates.join(", ")}`,
+          evidence: [first.quote, second.quote],
+        });
       }
-
-      const firstDates = extractDates(first).map((date) => `${date.year}-${date.month}`);
-      const secondDates = extractDates(second).map((date) => `${date.year}-${date.month}`);
-
-      if (firstDates.join() === secondDates.join()) {
-        continue;
-      }
-
-      contradictions.push({
-        id: "",
-        kind: "date_mismatch",
-        severity: "warning",
-        factIds: [first.id, second.id],
-        description: `Разные даты одного места работы: ${firstDates.join(", ")} против ${secondDates.join(", ")}`,
-        evidence: [first.quote, second.quote],
-      });
     }
   }
 

@@ -36,8 +36,40 @@ describe("detectDateContradictions()", () => {
 
   it("одинаковые даты -> нет противоречий", () => {
     const result = detectDateContradictions([
-      employment({ quote: "работал с 2020-01 по 2021-01" }),
-      employment({ id: "claim2", quote: "работал с 2020-01 по 2021-01" }),
+      employment({ quote: "работал в компании Ромашка с 2020-01 по 2021-01" }),
+      employment({ id: "claim2", quote: "работал в компании Ромашка с 2020-01 по 2021-01" }),
+    ]);
+
+    expect(result).toEqual([]);
+  });
+
+  it("две компании с разными датами -> нет contradictions (общие слова не считаются)", () => {
+    const result = detectDateContradictions([
+      employment({
+        statement: "работал руководителем отдела продаж в компании Ромашка",
+        quote: "работал в компании Ромашка с 2020-01 по 2021-01",
+      }),
+      employment({
+        id: "claim2",
+        statement: "работал руководителем отдела продаж в компании Лютик",
+        quote: "работал в компании Лютик с 2022-01 по 2023-01",
+      }),
+    ]);
+
+    expect(result).toEqual([]);
+  });
+
+  it("компании не извлечены -> нет contradictions", () => {
+    const result = detectDateContradictions([
+      employment({
+        statement: "работал руководителем отдела продаж в компании А",
+        quote: "работал с 2020-01 по 2021-01",
+      }),
+      employment({
+        id: "claim2",
+        statement: "работал руководителем отдела продаж в компании Б",
+        quote: "работал с 2022-01 по 2023-01",
+      }),
     ]);
 
     expect(result).toEqual([]);
