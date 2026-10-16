@@ -152,6 +152,36 @@ describe("applyAnswer()", () => {
     expect((await readStatus())?.status).toBe("remove");
   });
 
+  it('contradiction + "не надо удалять" -> confirmed', async () => {
+    await applyAnswer(
+      question({ type: "contradiction" }),
+      answer({ freeText: "не надо удалять" }),
+      join(dir, "facts.json"),
+    );
+
+    expect((await readStatus())?.status).toBe("confirmed");
+  });
+
+  it('contradiction + "не оставлять" -> remove', async () => {
+    await applyAnswer(
+      question({ type: "contradiction" }),
+      answer({ freeText: "не оставлять" }),
+      join(dir, "facts.json"),
+    );
+
+    expect((await readStatus())?.status).toBe("remove");
+  });
+
+  it('target_vs_measured + "не является целевой" -> confirmed', async () => {
+    await applyAnswer(
+      question({ type: "target_vs_measured" }),
+      answer({ freeText: "не является целевой" }),
+      join(dir, "facts.json"),
+    );
+
+    expect((await readStatus())?.status).toBe("confirmed");
+  });
+
   it("пустой ответ -> deferred: факт не меняется, warning", async () => {
     const result = await applyAnswer(
       question({ type: "target_vs_measured" }),

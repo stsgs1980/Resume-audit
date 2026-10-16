@@ -51,8 +51,19 @@ function detectCurrency(freeText: string): (typeof CURRENCIES)[number] | null {
   return null;
 }
 
+/** Отрицание перед «удалить»: между отрицанием и словом до двух служебных. */
+const NEGATED_REMOVE = /(?:^|\s)(?:не|нельзя|нет|никогда)(?:\s+[а-яёa-z]+){0,2}\s+удал/u;
+
+/** Отрицание перед «оставить»: «не оставлять» означает удаление. */
+const NEGATED_KEEP = /(?:^|\s)(?:не|нельзя|нет|никогда)(?:\s+[а-яёa-z]+){0,2}\s+остав/u;
+
+/** Отрицание перед «целевая»: «не является целевой» — не прогноз. */
+const NEGATED_TARGET = /(?:^|\s)(?:не|нельзя|нет|никогда)(?:\s+[а-яёa-z]+){0,2}\s+(?:целев|target)/u;
+
 /**
  * Определяет интент свободного ответа по ключевым словам и отрицаниям.
+ * Отрицание проверяется раньше ключевого слова, в том числе через
+ * служебные слова («не надо удалять»).
  * "positive" — явное действие удаления («удалить» / «целевая»);
  * "negative" — факт сохраняется («не удалять» / «оставить» / «не целевая»);
  * "unclear" — ответ не распознан.
@@ -69,7 +80,7 @@ export function parseAnswerIntent(freeText: string, questionType: string): "posi
   }
 
   if (questionType === "target_vs_measured") {
-    if (/(?:^|\s)не\s*(?:целев|target)/u.test(text)) {
+    if (NEGATED_TARGET.test(text)) {
       return "negative";
     }
 
@@ -81,8 +92,12 @@ export function parseAnswerIntent(freeText: string, questionType: string): "posi
   }
 
   if (questionType === "contradiction") {
-    if (/(?:^|\s)не\s*удал/u.test(text)) {
+    if (NEGATED_REMOVE.test(text)) {
       return "negative";
+    }
+
+    if (NEGATED_KEEP.test(text)) {
+      return "positive";
     }
 
     if (text.includes("остав")) {
