@@ -18,6 +18,18 @@ export function computeBlockReason(layer1: ValidationLayer1, layer2: ValidationL
     reasons.push("неподтверждённые навыки");
   }
 
+  if (layer1.forbiddenFound.length > 0) {
+    reasons.push("найдены запрещённые слова");
+  }
+
+  if (layer1.placeholdersFound.length > 0) {
+    reasons.push("найдены плейсхолдеры");
+  }
+
+  if (layer1.targetMetricsInResults.length > 0) {
+    reasons.push("целевые метрики в блоке результатов");
+  }
+
   if (layer1.hedgeErrors.length > 0) {
     reasons.push("отсутствует оговорка");
   }

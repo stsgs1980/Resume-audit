@@ -35,6 +35,59 @@ describe("computeBlockReason()", () => {
     expect(isBlocked(computeBlockReason(layer1, null))).toBe(true);
   });
 
+  it("forbiddenFound -> blocked", () => {
+    const layer1 = cleanLayer1();
+
+    layer1.forbiddenFound = ["production"];
+
+    expect(computeBlockReason(layer1, null)).toContain("найдены запрещённые слова");
+    expect(isBlocked(computeBlockReason(layer1, null))).toBe(true);
+  });
+
+  it("placeholdersFound -> blocked", () => {
+    const layer1 = cleanLayer1();
+
+    layer1.placeholdersFound = ["\\+7\\s*\\(XXX\\)"];
+
+    expect(computeBlockReason(layer1, null)).toContain("найдены плейсхолдеры");
+    expect(isBlocked(computeBlockReason(layer1, null))).toBe(true);
+  });
+
+  it("targetMetricsInResults -> blocked", () => {
+    const layer1 = cleanLayer1();
+
+    layer1.targetMetricsInResults = ["5 млн"];
+
+    expect(computeBlockReason(layer1, null)).toContain("целевые метрики в блоке результатов");
+    expect(isBlocked(computeBlockReason(layer1, null))).toBe(true);
+  });
+
+  it("порядок причин: числа, навыки, слова, плейсхолдеры, метрики, hedge, заголовок, поля, доли", () => {
+    const layer1 = cleanLayer1();
+
+    layer1.numberErrors = [{ number: "7,5 млрд", factId: null, reason: "unsupported_number" }];
+    layer1.skillErrors = ["Go"];
+    layer1.forbiddenFound = ["production"];
+    layer1.placeholdersFound = ["XXX"];
+    layer1.targetMetricsInResults = ["5 млн"];
+    layer1.hedgeErrors = ["res1"];
+    layer1.titleOk = false;
+    layer1.requiredFieldsMissing = ["about"];
+    layer1.shareSumOk = false;
+
+    expect(computeBlockReason(layer1, null)).toEqual([
+      "числа не найдены в facts.json",
+      "неподтверждённые навыки",
+      "найдены запрещённые слова",
+      "найдены плейсхолдеры",
+      "целевые метрики в блоке результатов",
+      "отсутствует оговорка",
+      "заголовок не соответствует роли",
+      "не все обязательные поля hh.ru",
+      "сумма долей вне [0.99, 1.01]",
+    ]);
+  });
+
   it("layer2 verdict not ok -> blocked", () => {
     const layer2: ValidationLayer2 = {
       checks: [
