@@ -96,6 +96,32 @@ describe("buildJobs()", () => {
     expect(jobs.every((job) => job.company === "")).toBe(true);
     expect(warnings.filter((warning) => warning.code === "unknown_company")).toHaveLength(2);
   });
+
+  it("полный диапазон предпочитается незакрытому независимо от порядка", () => {
+    const { jobs } = buildJobs(
+      [
+        employment({ quote: "работал в компании Ромашка с 2020-01 по 2021" }),
+        employment({ id: "claim2", quote: "работал в компании Ромашка с 2020-01 по 2021-05" }),
+      ],
+      roles,
+    );
+
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]).toMatchObject({ start: "2020-01", end: "2021-05" });
+  });
+
+  it("текущая работа предпочитается закрытому диапазону", () => {
+    const { jobs } = buildJobs(
+      [
+        employment({ quote: "работал в компании Ромашка с 2020-01 по 2021-05" }),
+        employment({ id: "claim2", quote: "работаю в компании Ромашка с 2020-01 по настоящее время" }),
+      ],
+      roles,
+    );
+
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]).toMatchObject({ start: "2020-01", end: null, is_current: true });
+  });
 });
 
 describe("buildResults()", () => {

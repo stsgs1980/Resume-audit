@@ -34,36 +34,48 @@ const RU_PATTERN = /\b(0[1-9]|1[0-2])\.((?:19|20)\d{2})\b/;
 /** Маркеры текущей работы. */
 const CURRENT_MARKERS = ["по настоящее время", "по н.в.", "сейчас"];
 
-/** Названия месяцев в именительном и родительном падежах. */
+/** Названия месяцев в именительном, родительном и предложном падежах. */
 const MONTHS: Record<string, string> = {
   январь: "01",
   января: "01",
+  январе: "01",
   февраль: "02",
   февраля: "02",
+  феврале: "02",
   март: "03",
   марта: "03",
+  марте: "03",
   апрель: "04",
   апреля: "04",
+  апреле: "04",
   май: "05",
   мая: "05",
+  мае: "05",
   июнь: "06",
   июня: "06",
+  июне: "06",
   июль: "07",
   июля: "07",
+  июле: "07",
   август: "08",
   августа: "08",
+  августе: "08",
   сентябрь: "09",
   сентября: "09",
+  сентябре: "09",
   октябрь: "10",
   октября: "10",
+  октябре: "10",
   ноябрь: "11",
   ноября: "11",
+  ноябре: "11",
   декабрь: "12",
   декабря: "12",
+  декабре: "12",
 };
 
-const MONTH_NAME_PATTERN =
-  /(январь|января|февраль|февраля|март|марта|апрель|апреля|май|мая|июнь|июня|июль|июля|август|августа|сентябрь|сентября|октябрь|октября|ноябрь|ноября|декабрь|декабря)\s+((?:19|20)\d{2})/i;
+/** Месяц + год: «октябрь 2003», «октября 2003», «в октябре 2003». */
+const MONTH_NAME_PATTERN = new RegExp(`(${Object.keys(MONTHS).join("|")})\\s+((?:19|20)\\d{2})`, "i");
 
 /** Голый год. */
 const YEAR_PATTERN = /\b((?:19|20)\d{2})\b/;
@@ -125,6 +137,7 @@ function findDates(text: string): FoundDate[] {
 /**
  * Извлекает диапазон дат из цитаты. Голый год не превращается в месяц 01:
  * при нехватке данных он возвращается в поле year с confidence low.
+ * Голый год перед единственной датой месяца не становится началом.
  *
  * @param quote - цитата утверждения
  * @returns начало, конец, год, достоверность и признак текущей работы
@@ -147,7 +160,11 @@ export function extractDateRange(quote: string): DateRange {
   }
 
   const confidence: DateConfidence = months.length === 0 ? "low" : years.length === 0 ? "high" : "medium";
-  const start = months[0]?.value ?? null;
+  const firstMonth = months[0];
+  const firstYear = years[0];
+  const yearBeforeMonth =
+    months.length === 1 && firstMonth !== undefined && firstYear !== undefined && firstYear.index < firstMonth.index;
+  const start = yearBeforeMonth ? null : (firstMonth?.value ?? null);
   const lastMonth = months[months.length - 1]?.value ?? null;
   let end: string | null = null;
 

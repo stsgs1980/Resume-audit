@@ -74,8 +74,11 @@ export function buildJobs(claims: Claim[], roles: string[]): { jobs: Job[]; warn
     const usable = group.claims
       .map((claim) => extractDateRange(claim.quote))
       .filter((range) => range.confidence === "high" || range.confidence === "medium");
+    const currentRanges = usable.filter((range) => range.isCurrent);
+    const closedRanges = usable.filter((range) => !range.isCurrent && range.end !== null);
+    const candidates = currentRanges.length > 0 ? currentRanges : closedRanges.length > 0 ? closedRanges : usable;
 
-    for (const range of usable) {
+    for (const range of candidates) {
       if (range.start !== null) {
         starts.push(range.start);
         ranges.set(`${range.start}|${range.end ?? ""}`, (ranges.get(`${range.start}|${range.end ?? ""}`) ?? 0) + 1);
@@ -101,7 +104,7 @@ export function buildJobs(claims: Claim[], roles: string[]): { jobs: Job[]; warn
     const [start, endRaw] = best.split("|");
     const end = endRaw === "" || endRaw === undefined ? null : endRaw;
     const firstQuote = group.claims.map((claim) => claim.quote).find((quote) => quote.trim() !== "") ?? "";
-    const isCurrent = usable.some((range) => range.isCurrent);
+    const isCurrent = candidates.some((range) => range.isCurrent);
 
     if (!isCurrent && end === null) {
       warnings.push({ code: "open_end", message: `Нет даты конца, работа пропущена: ${label}` });

@@ -62,6 +62,26 @@ describe("extractDateRange()", () => {
     });
   });
 
+  it("голый год перед месяцем -> начало не подставляется", () => {
+    expect(extractDateRange("работал с 2003 по 2005-07")).toEqual({
+      start: null,
+      end: null,
+      year: "2003",
+      confidence: "medium",
+      isCurrent: false,
+    });
+  });
+
+  it("предложный падеж: в октябре 2003 -> 2003-10, confidence high", () => {
+    expect(extractDateRange("работал в октябре 2003")).toEqual({
+      start: "2003-10",
+      end: "2003-10",
+      year: null,
+      confidence: "high",
+      isCurrent: false,
+    });
+  });
+
   it("пустая строка -> confidence null", () => {
     expect(extractDateRange("")).toEqual({
       start: null,
