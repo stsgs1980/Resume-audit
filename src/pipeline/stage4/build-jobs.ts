@@ -1,29 +1,9 @@
+import { detectClaimCompany } from "../stage3/company";
 import { extractDateRange } from "./parse-dates";
 import type { Claim, Job, JobResult, Stage4Warning } from "./types";
 
-/** Компания после "в" или "в компании": первое слово с заглавной. */
-const COMPANY_PATTERN = /в\s+(?:компании\s+)?([А-ЯЁA-Z][^\s.,;:!?()]*)/u;
-
 /** Должность после "работал/должность". */
 const POSITION_PATTERN = /(?:работал[а-я]*|должность)\s+([^.,;:!?()]{1,60})/iu;
-
-/**
- * Определяет компанию из формулировки или цитаты.
- *
- * @param claim - утверждение
- * @returns компания или null
- */
-function detectCompany(claim: Claim): string | null {
-  for (const text of [claim.statement, claim.quote]) {
-    const match = COMPANY_PATTERN.exec(text);
-
-    if (match?.[1] !== undefined) {
-      return match[1];
-    }
-  }
-
-  return null;
-}
 
 /**
  * Извлекает должность из цитаты.
@@ -40,6 +20,8 @@ function detectPosition(quote: string): string {
 /**
  * Строит jobs группировкой employment-утверждений по компаниям.
  * Без дат работа пропускается с предупреждением (даты не выдумываются).
+ * Утверждения без извлекаемой компании не сливаются друг с другом:
+ * job получает company "" и warning unknown_company.
  *
  * @param claims - утверждения этапа 2
  * @param roles - целевые роли (для будущих результатов)
@@ -48,31 +30,48 @@ function detectPosition(quote: string): string {
 export function buildJobs(claims: Claim[], roles: string[]): { jobs: Job[]; warnings: Stage4Warning[] } {
   void roles;
 
-  const groups = new Map<string, Claim[]>();
+  const groups: Array<{ company: string; claims: Claim[] }> = [];
+  const byCompany = new Map<string, number>();
 
   for (const claim of claims) {
     if (claim.category !== "employment") {
       continue;
     }
 
-    const company = detectCompany(claim) ?? "unknown";
-    const group = groups.get(company) ?? [];
+    const company = detectClaimCompany(claim);
 
-    group.push(claim);
-    groups.set(company, group);
+    if (company === null) {
+      groups.push({ company: "", claims: [claim] });
+
+      continue;
+    }
+
+    const key = company.toLowerCase();
+    const existing = byCompany.get(key);
+
+    if (existing === undefined) {
+      byCompany.set(key, groups.length);
+      groups.push({ company, claims: [claim] });
+    } else {
+      groups[existing]?.claims.push(claim);
+    }
   }
 
   const unsorted: Job[] = [];
   const warnings: Stage4Warning[] = [];
 
-  for (const [company, group] of groups) {
-    if (company === "unknown") {
-      warnings.push({ code: "unknown_company", message: `Компания не определена: ${group[0]?.id}` });
+  for (const group of groups) {
+    const label = group.company === "" ? (group.claims[0]?.id ?? "") : group.company;
+
+    if (group.company === "") {
+      for (const claim of group.claims) {
+        warnings.push({ code: "unknown_company", message: `Компания не извлечена из цитаты: ${claim.id}` });
+      }
     }
 
     const ranges = new Map<string, number>();
     const starts: string[] = [];
-    const usable = group
+    const usable = group.claims
       .map((claim) => extractDateRange(claim.quote))
       .filter((range) => range.confidence === "high" || range.confidence === "medium");
 
@@ -84,7 +83,7 @@ export function buildJobs(claims: Claim[], roles: string[]): { jobs: Job[]; warn
     }
 
     if (starts.length === 0) {
-      warnings.push({ code: "no_dates", message: `Недостаточно данных для дат, работа пропущена: ${company}` });
+      warnings.push({ code: "no_dates", message: `Недостаточно данных для дат, работа пропущена: ${label}` });
 
       continue;
     }
@@ -101,25 +100,25 @@ export function buildJobs(claims: Claim[], roles: string[]): { jobs: Job[]; warn
 
     const [start, endRaw] = best.split("|");
     const end = endRaw === "" || endRaw === undefined ? null : endRaw;
-    const firstQuote = group.map((claim) => claim.quote).find((quote) => quote.trim() !== "") ?? "";
+    const firstQuote = group.claims.map((claim) => claim.quote).find((quote) => quote.trim() !== "") ?? "";
     const isCurrent = usable.some((range) => range.isCurrent);
 
     if (!isCurrent && end === null) {
-      warnings.push({ code: "open_end", message: `Нет даты конца, работа пропущена: ${company}` });
+      warnings.push({ code: "open_end", message: `Нет даты конца, работа пропущена: ${label}` });
 
       continue;
     }
 
     unsorted.push({
       id: "",
-      company,
+      company: group.company,
       position: detectPosition(firstQuote),
       start: start ?? "",
       end,
       is_current: isCurrent,
       overlap_group: null,
       parallel_justification: "",
-      source_files: [...new Set(group.map((claim) => claim.source_file))],
+      source_files: [...new Set(group.claims.map((claim) => claim.source_file))],
     });
   }
 
@@ -174,7 +173,7 @@ export function buildResults(
     }
 
     const text = `${claim.statement} ${claim.quote}`.toLowerCase();
-    const job = jobs.find((entry) => text.includes(entry.company.toLowerCase()));
+    const job = jobs.find((entry) => entry.company !== "" && text.includes(entry.company.toLowerCase()));
     const id = `res${counter}`;
 
     counter += 1;

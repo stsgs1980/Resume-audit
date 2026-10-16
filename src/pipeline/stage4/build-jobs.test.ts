@@ -82,6 +82,20 @@ describe("buildJobs()", () => {
     expect(jobs).toHaveLength(1);
     expect(jobs[0]).toMatchObject({ start: "2020-01", end: "2021-01" });
   });
+
+  it("компания не извлечена -> company '', warning, без склейки друг с другом", () => {
+    const { jobs, warnings } = buildJobs(
+      [
+        employment({ statement: "работал руководителем", quote: "работал 2020-01 - 2021-01" }),
+        employment({ id: "claim2", statement: "работал аналитиком", quote: "работал 2021-03 - 2022-01" }),
+      ],
+      roles,
+    );
+
+    expect(jobs).toHaveLength(2);
+    expect(jobs.every((job) => job.company === "")).toBe(true);
+    expect(warnings.filter((warning) => warning.code === "unknown_company")).toHaveLength(2);
+  });
 });
 
 describe("buildResults()", () => {
@@ -119,6 +133,20 @@ describe("buildResults()", () => {
     );
 
     expect(warnings.length).toBeGreaterThan(0);
+  });
+
+  it("result не привязывается к job без компании", () => {
+    const { jobs } = buildJobs(
+      [employment({ statement: "работал руководителем", quote: "работал 2020-01 - 2021-01" })],
+      roles,
+    );
+    const { warnings } = buildResults(
+      [resultClaim({ statement: "выручка выросла", quote: "выручка выросла" })],
+      jobs,
+      roles,
+    );
+
+    expect(warnings.some((warning) => warning.code === "unbound_result")).toBe(true);
   });
 
   it("detected_roles ограничивают roles результата", () => {
