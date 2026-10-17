@@ -7,8 +7,33 @@ const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const probeName = "tmp-length-probe-300.ts";
 const probePath = join(repoRoot, probeName);
 
+/**
+ * Запускает check-file-length.ts как дочерний процесс.
+ * stderr явно переведён в pipe, чтобы ожидаемые падения
+ * не попадали в общий вывод тестов.
+ *
+ * @param {string[]} args - аргументы скрипта
+ * @returns {string} stdout процесса
+ */
 const runCheck = (args) =>
-  execFileSync("node", ["scripts/check-file-length.ts", ...args], { encoding: "utf8", cwd: repoRoot });
+  execFileSync("node", ["scripts/check-file-length.ts", ...args], { encoding: "utf8", cwd: repoRoot, stdio: "pipe" });
+
+/**
+ * Запускает проверку, ожидая падение. Exit code и stderr проверяются
+ * как значения, а не через вывод в консоль.
+ *
+ * @param {string[]} args - аргументы скрипта
+ * @returns {Error & { status?: number; stderr?: string }} ошибка дочернего процесса
+ */
+const runCheckExpectingFailure = (args) => {
+  try {
+    runCheck(args);
+  } catch (error) {
+    return error;
+  }
+
+  throw new Error("check-file-length должен был упасть, но прошёл");
+};
 
 const writeProbe = (lines) => writeFileSync(probePath, `${"// length probe\n".repeat(lines)}`);
 
@@ -19,7 +44,11 @@ describe("check-file-length untracked files", () => {
     writeProbe(300);
 
     try {
-      expect(() => runCheck(["--all"])).toThrow();
+      const error = runCheckExpectingFailure(["--all"]);
+
+      expect(error.status).toBe(1);
+      expect(String(error.stderr)).toContain("[FAIL] File 'tmp-length-probe-300.ts'");
+      expect(String(error.stderr)).toContain("[Anti-Monolith] Commit rejected.");
     } finally {
       removeProbe();
     }
@@ -29,7 +58,11 @@ describe("check-file-length untracked files", () => {
     writeProbe(300);
 
     try {
-      expect(() => runCheck([])).toThrow();
+      const error = runCheckExpectingFailure([]);
+
+      expect(error.status).toBe(1);
+      expect(String(error.stderr)).toContain("[FAIL] File 'tmp-length-probe-300.ts'");
+      expect(String(error.stderr)).toContain("[Anti-Monolith] Commit rejected.");
     } finally {
       removeProbe();
     }
