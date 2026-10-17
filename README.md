@@ -40,7 +40,8 @@
 ## Features
 
 - **8 этапов конвейера**: файлы → факты → аудит → вопросы → роли → ATS →
-  генерация → верификация. Готовы этапы 1–3 [OK], этапы 4–8 [TODO].
+  генерация → верификация. Готовы все этапы [OK]; роли и ATS (этапы 5–6)
+  реализованы в составе `stage3b`.
 - **Источник правды**: `facts.json` содержит только подтверждённые факты.
   Стаж, доли и производные — вычисляются.
 - **Человек в цикле**: этап 4 — очередь вопросов с карточками `evidence`,
@@ -126,18 +127,29 @@ npm run dev
 
 ## Статус разработки
 
-Проект в активной разработке. Закрыты Фазы 0–2:
-спецификация, ядро, схемы и данные.
+Проект в активной разработке. Закрыты Фазы 0–4:
+спецификация, ядро, схемы, данные и все 8 этапов конвейера.
 
 | Фаза               | Статус |
 | ------------------ | ------ |
 | 0. Спецификация    | [OK]   |
 | 1. Ядро            | [OK]   |
 | 2. Схемы данных    | [OK]   |
-| 3. LLM-слой        | [TODO] |
-| 4. Этапы конвейера | [TODO] |
+| 3. LLM-слой        | [OK]   |
+| 4. Этапы конвейера | [OK]   |
 | 5. UI              | [TODO] |
 | 6. Приёмка         | [TODO] |
+
+Фаза 4 в разбивке:
+
+- Этап 1 (файлы) — [OK]
+- Этап 2 (claims) — [OK]
+- Этап 3 (аудит) — [OK]
+- Этап 4 (факты, человек в цикле) — [OK]
+- Этап 5 (роли) — [OK] (в составе `stage3b`)
+- Этап 6 (ATS) — [OK] (в составе `stage3b`)
+- Этап 7 (генерация) — [OK]
+- Этап 8 (верификация) — [OK]
 
 Что должно быть построено — [SPEC.md](docs/superpowers/specs/SPEC.md).
 Как строить по шагам — [BUILD.md](docs/superpowers/plans/BUILD.md).
@@ -179,13 +191,14 @@ npm run dev
 
 ### Слои
 
-| Слой   | Папка         | Может импортировать      | Не может                         |
-| ------ | ------------- | ------------------------ | -------------------------------- |
-| Ядро   | `src/core`    | только `src/core`        | `schemas`, `llm`, `server`, `ui` |
-| Схемы  | `src/schemas` | только `src/schemas`     | `core`, `llm`, `server`, `ui`    |
-| LLM    | `src/llm`     | `core`, `schemas`        | `server`, `ui`                   |
-| Сервер | `src/server`  | `core`, `schemas`, `llm` | `ui`                             |
-| UI     | `src/ui`      | `schemas`, HTTP API      | `core`, `llm`                    |
+| Слой     | Папка          | Может импортировать                        | Не может                         |
+| -------- | -------------- | ------------------------------------------ | -------------------------------- |
+| Ядро     | `src/core`     | только `src/core`                          | `schemas`, `llm`, `server`, `ui` |
+| Схемы    | `src/schemas`  | только `src/schemas`                       | `core`, `llm`, `server`, `ui`    |
+| LLM      | `src/llm`      | `core`, `schemas`                          | `server`, `ui`                   |
+| Сервер   | `src/server`   | `core`, `schemas`, `llm`                   | `ui`                             |
+| Pipeline | `src/pipeline` | `core`, `schemas`, `llm`, `server/storage` | `ui`                             |
+| UI       | `src/ui`       | `schemas`, HTTP API                        | `core`, `llm`                    |
 
 ### Детали
 
@@ -203,33 +216,34 @@ npm run dev
 ```text
 src/
   core/
-    dates.ts           ← включительный подсчёт, полуоткрытые интервалы
-    experience.ts      ← наивная сумма + объединение интервалов
-    numbers.ts         ← нормализация, валюта из контекста
-    skills.ts          ← per-role блок-листы
-    ats.ts             ← ключевые слова в контексте
-    verification.ts    ← слой 1 верификации
+    dates.ts             ← включительный подсчёт, полуоткрытые интервалы
+    experience.ts        ← наивная сумма + объединение интервалов
+    interval-analysis.ts ← разрывы и пересечения
+    numbers.ts           ← нормализация, валюта из контекста
+    number-check.ts      ← кросс-проверка чисел
+    skills.ts            ← per-role блок-листы
+    detectors.ts         ← плейсхолдеры, маркеры, прогнозные
+    format.ts            ← форматирование стажа
+    verification.ts      ← слой 1 верификации
   schemas/
-    facts.ts
-    evidence.ts
-    claims.ts
-    audit.ts
-    validation.ts
-    stage-state.ts
-    index.ts             ← реэкспорт схем и типов
+    facts.ts, evidence.ts, claims.ts, audit.ts
+    validation.ts, stage-state.ts, files.ts, index.ts
   llm/
-    client.ts
-    session.ts
-    structured-output.ts
-    checkpoint.ts
+    client.ts, session.ts, structured-output.ts, checkpoint.ts
+    prompts.ts, prompt-registry.ts, logger.ts, auth.ts
+    polling.ts, schemas.ts, types.ts, index.ts
+  pipeline/
+    stage1/              ← файлы: чтение, классификация
+    stage2/              ← claims: чанкинг, извлечение через LLM
+    stage3/              ← аудит: противоречия, вопросы, роли, ATS
+    stage4/              ← факты: очередь вопросов, человек в цикле
+    stage7/              ← генерация
+    stage8/              ← верификация
   server/
-    index.ts
-    routes/
-    storage/             ← paths, files, hash, lock,
-                           stage-state, workspaces, errors
+    storage/             ← paths, files, hash, lock, stage-state,
+                           workspaces, errors, index
   ui/
-    components/
-    pages/
+    App.tsx
     main.tsx
 ```
 
@@ -298,8 +312,9 @@ JSDoc (`@param`, `@return`), `const`/`let`. См. `.aiassistant/rules/AI Rules.m
    оценок, не расчёты.
 3. **Конфиденциальность.** Резюме — персональные данные. Тексты утверждений
    и черновики резюме передаются в opencode server и далее в провайдера
-   модели. `model-responses.log` содержит персональные данные и не должен
-   попадать в систему контроля версий.
+   модели. Журнал `data/logs/model-responses.log` хранит только метаданные
+   вызовов (длины, время, статусы), без самих текстов. Каталог `data/`
+   в `.gitignore`.
 4. Тексты вакансий не обязательны. Без них ключевые слова строятся
    на гипотезе и помечаются в отчёте.
 5. Приложение не проверяет факты через работодателей и не может этого делать.
