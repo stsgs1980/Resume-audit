@@ -1,6 +1,6 @@
 <!-- markdownlint-disable -->
 
-# 1.0.0 (2026-10-16)
+# 1.0.0 (2026-10-17)
 
 ### Bug Fixes
 
