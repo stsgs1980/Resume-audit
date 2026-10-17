@@ -60,6 +60,20 @@ export interface AuditWarning {
   message: string;
 }
 
+/** Сводка стажа для audit.json: naive — конвенция hh.ru, distinct — истина. */
+export interface ExperienceSummary {
+  /** Наивная сумма месяцев (конвенция hh.ru). */
+  naive: number;
+  /** Объединение интервалов — истина без двойного счёта. */
+  distinct: number;
+  /** naive - distinct. */
+  difference: number;
+  /** formatExperience(naive). */
+  formattedNaive: string;
+  /** formatExperience(distinct). */
+  formattedDistinct: string;
+}
+
 /** Итог этапа 3a. */
 export interface Stage3aResult {
   /** Время генерации в ISO 8601. */
@@ -76,6 +90,8 @@ export interface Stage3aResult {
   factsHash: string;
   /** Хеш мета facts.json (пусто, если facts.json ещё нет). */
   metaHash: string;
+  /** Сводка стажа по employment-интервалам. */
+  experience: ExperienceSummary;
 }
 
 /** Оценка роли. */
@@ -178,6 +194,8 @@ export interface AuditResult {
   roles: RoleAssessment[];
   /** Анализ ATS или null. */
   ats: AtsAnalysis | null;
+  /** Сводка стажа: naive — hh.ru, distinct — истина. */
+  experience: ExperienceSummary;
 }
 
 /** Параметры запуска этапа 3. */

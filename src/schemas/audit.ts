@@ -57,6 +57,14 @@ const roleAssessmentSchema = z.object({
 
 const atsSchema = z.record(z.string(), z.unknown());
 
+const experienceSchema = z.object({
+  naive: z.number(),
+  distinct: z.number(),
+  difference: z.number(),
+  formattedNaive: z.string(),
+  formattedDistinct: z.string(),
+});
+
 export const auditSchema = z.object({
   facts_hash: z.string(),
   meta_hash: z.string(),
@@ -66,6 +74,7 @@ export const auditSchema = z.object({
   warnings: z.array(warningSchema),
   roles: z.array(roleAssessmentSchema),
   ats: atsSchema.nullable(),
+  experience: experienceSchema.optional(),
 });
 
 export type Audit = z.infer<typeof auditSchema>;

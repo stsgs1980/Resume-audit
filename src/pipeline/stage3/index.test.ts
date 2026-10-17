@@ -106,6 +106,43 @@ describe("runStage3a()", () => {
     expect(result.openQuestions[0]?.id).toBe("q_001");
   });
 
+  it("experience: стыкующиеся работы -> naive 184, distinct 183, difference 1", async () => {
+    await runStage3a(
+      params([
+        claim({
+          id: "claim1",
+          category: "employment",
+          number: null,
+          currency: null,
+          quote: "работал 2010-01 - 2019-04",
+        }),
+        claim({
+          id: "claim2",
+          category: "employment",
+          number: null,
+          currency: null,
+          quote: "работал 2019-04 - 2025-03",
+        }),
+      ]),
+    );
+
+    const stored = JSON.parse(await readFile(join(dir, "audit.json"), "utf8")) as {
+      experience: {
+        naive: number;
+        distinct: number;
+        difference: number;
+        formattedNaive: string;
+        formattedDistinct: string;
+      };
+    };
+
+    expect(stored.experience.naive).toBe(184);
+    expect(stored.experience.distinct).toBe(183);
+    expect(stored.experience.difference).toBe(1);
+    expect(stored.experience.formattedNaive).toBe("15 лет 4 месяца");
+    expect(stored.experience.formattedDistinct).toBe("15 лет 3 месяца");
+  });
+
   it("загружает claims из файла при пустом входе", async () => {
     await writeFile(join(dir, "claims.json"), JSON.stringify({ claims: [claim({ currency: null })] }), "utf8");
 

@@ -1,10 +1,11 @@
 import type { YearMonth } from "../../core/dates";
 import { monthsInclusive, parseYearMonth } from "../../core/dates";
 import type { ResolvedInterval } from "../../core/experience";
-import { resolvePresent } from "../../core/experience";
+import { computeExperience, resolvePresent } from "../../core/experience";
+import { formatExperience } from "../../core/format";
 import { findGaps } from "../../core/interval-analysis";
 import { detectClaimCompany } from "./company";
-import type { Claim, Contradiction, OpenQuestion } from "./types";
+import type { Claim, Contradiction, ExperienceSummary, OpenQuestion } from "./types";
 
 /** Даты вида YYYY-MM в тексте. */
 const DATE_PATTERN = /\b(19|20)\d{2}-(0[1-9]|1[0-2])\b/g;
@@ -51,6 +52,25 @@ export function extractEmploymentIntervals(claims: Claim[]): ResolvedInterval[] 
   }
 
   return intervals;
+}
+
+/**
+ * Считает сводку стажа по employment-интервалам claims.
+ * naive — конвенция hh.ru, distinct — объединение интервалов (истина).
+ *
+ * @param claims - утверждения этапа 2
+ * @returns сводка для audit.json
+ */
+export function computeExperienceSummary(claims: Claim[]): ExperienceSummary {
+  const metrics = computeExperience(extractEmploymentIntervals(claims));
+
+  return {
+    naive: metrics.naive,
+    distinct: metrics.distinct,
+    difference: metrics.difference,
+    formattedNaive: formatExperience(metrics.naive),
+    formattedDistinct: formatExperience(metrics.distinct),
+  };
 }
 
 /**

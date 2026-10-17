@@ -245,6 +245,13 @@ data/
   "facts_hash": "sha256:...",
   "meta_hash": "sha256:...",
   "generated_at": "YYYY-MM-DDTHH:MM:SSZ",
+  "experience": {
+    "naive": 262,
+    "distinct": 261,
+    "difference": 1,
+    "formattedNaive": "21 год 10 месяцев",
+    "formattedDistinct": "21 год 9 месяцев"
+  },
   "contradictions": [
     {
       "id": "contradiction1",
@@ -296,7 +303,11 @@ data/
 (`roleId`, `scores`, `total`, `strengths`, `gaps`,
 `overpositioningRisk`, `recommendation`). `ats` — свободная запись
 `record<string, unknown>` или `null` (этап 3b упал), а не фиксированная
-структура.
+структура. `experience` — опциональная сводка стажа: `naive` (наивная
+сумма, конвенция hh.ru), `distinct` (объединение интервалов — истина),
+`difference` (naive - distinct) и `formatted*` (`formatExperience` из
+`src/core/format.ts`). Считается по employment-интервалам claims
+(`computeExperienceSummary` в этапе 3a).
 
 ## 11. Схема stage-state.json
 

@@ -3,7 +3,7 @@ import { claimsSchema } from "../../schemas/claims";
 import { factsSchema } from "../../schemas/facts";
 import { readJson, writeJsonAtomic } from "../../server/storage/files";
 import { hashFacts, hashMeta } from "../../server/storage/hash";
-import { detectDateContradictions, detectDurationMismatch, detectGaps } from "./date-check";
+import { computeExperienceSummary, detectDateContradictions, detectDurationMismatch, detectGaps } from "./date-check";
 import { crossCheckClaims } from "./number-check";
 import { detectParallelRoles, detectSkillConflicts } from "./overlap-check";
 import { generateCurrencyQuestions, generateEvidenceQuestions, generateTargetVsMeasured } from "./question-generator";
@@ -99,6 +99,8 @@ export async function runStage3a(params: Stage3aParams): Promise<Stage3aResult> 
       fail("audit_before_facts", hashes.warning);
     }
 
+    const experience = computeExperienceSummary(claims);
+
     const contradictions: Contradiction[] = [
       ...crossCheckClaims(claims),
       ...detectDateContradictions(claims),
@@ -130,6 +132,7 @@ export async function runStage3a(params: Stage3aParams): Promise<Stage3aResult> 
       counts: { contradictions: contradictions.length, openQuestions: openQuestions.length },
       factsHash: hashes.factsHash,
       metaHash: hashes.metaHash,
+      experience,
     };
 
     const audit = auditSchema.safeParse({
@@ -141,6 +144,7 @@ export async function runStage3a(params: Stage3aParams): Promise<Stage3aResult> 
       warnings: warnings.map((warning) => ({ ...warning, code: warning.kind })),
       roles: [],
       ats: {},
+      experience,
     });
 
     if (!audit.success) {
@@ -165,6 +169,7 @@ export async function runStage3a(params: Stage3aParams): Promise<Stage3aResult> 
       counts: { contradictions: 0, openQuestions: 0 },
       factsHash: "",
       metaHash: "",
+      experience: computeExperienceSummary([]),
     };
   }
 }
@@ -200,6 +205,7 @@ export async function runStage3(params: Stage3Params): Promise<AuditResult> {
     warnings,
     roles: stage3b.roles,
     ats: stage3b.ats,
+    experience: stage3a.experience,
   };
 
   const audit = auditSchema.safeParse({
