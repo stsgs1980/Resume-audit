@@ -5,7 +5,7 @@
  */
 
 import type { InclusiveInterval, YearMonth } from "./dates";
-import { monthsInclusive, toMonths } from "./dates";
+import { naiveSum, toHalfOpen, unionLength } from "./dates";
 
 /** Работа в терминах дат. */
 export interface JobInterval {
@@ -90,6 +90,7 @@ export function resolveJobEnd(job: JobInterval, present: YearMonth): ResolvedInt
 
 /**
  * Считает стаж двумя способами: наивная сумма и объединение.
+ * Делегирует в naiveSum и unionLength из dates.ts.
  *
  * @param intervals - разрешённые интервалы
  * @returns обе величины и разницу
@@ -99,39 +100,9 @@ export function computeExperience(intervals: ResolvedInterval[]): {
   distinct: number;
   difference: number;
 } {
-  const naive = intervals.reduce((sum, i) => sum + monthsInclusive(i.start, i.end), 0);
-
-  const halfOpen = intervals.map((i) => ({
-    start: toMonths(i.start),
-    end: toMonths(i.end) + 1,
-  }));
-
-  const sorted = [...halfOpen].sort((a, b) => a.start - b.start);
-  let distinct = 0;
-  let currentStart = 0;
-  let currentEnd = 0;
-  let initialized = false;
-
-  for (const interval of sorted) {
-    if (!initialized) {
-      currentStart = interval.start;
-      currentEnd = interval.end;
-      initialized = true;
-      continue;
-    }
-
-    if (interval.start <= currentEnd) {
-      currentEnd = Math.max(currentEnd, interval.end);
-    } else {
-      distinct += currentEnd - currentStart;
-      currentStart = interval.start;
-      currentEnd = interval.end;
-    }
-  }
-
-  if (initialized) {
-    distinct += currentEnd - currentStart;
-  }
+  const naive = naiveSum(intervals);
+  const halfOpen = intervals.map((interval) => toHalfOpen(interval));
+  const distinct = unionLength(halfOpen);
 
   return { naive, distinct, difference: naive - distinct };
 }
