@@ -6,7 +6,11 @@ import type { Checkpoint, CheckpointStatus } from "./types";
 const CHECKPOINT_STATUSES: CheckpointStatus[] = ["running", "completed", "failed", "incomplete"];
 
 /**
- * Мини-версия атомарной записи (долг: вынести writeJsonAtomic в общий модуль).
+ * Мини-версия атомарной записи.
+ *
+ * TODO: вынести writeJsonAtomic в общий модуль src/shared.
+ * Сейчас дублируется, потому что src/llm не может импортировать
+ * из src/server (границы слоёв).
  *
  * @param filePath - целевой путь
  * @param data - сериализуемые данные
