@@ -1,11 +1,9 @@
+import { detectCurrency } from "../../core/numbers";
 import type { Facts } from "../../schemas/facts";
 import { factsSchema } from "../../schemas/facts";
 import { readJson, writeJsonAtomic } from "../../server/storage/files";
 import type { OpenQuestion } from "../stage3/types";
 import type { Answer, Stage4Warning } from "./types";
-
-/** Валюты, распознаваемые в свободном ответе. */
-const CURRENCIES = ["RUB", "USD", "EUR"] as const;
 
 /**
  * Находит результаты по relatedClaimIds (id, evidence_id или source_claim_id).
@@ -31,24 +29,6 @@ function findTargets(facts: Facts, question: OpenQuestion): Array<{ jobIndex: nu
   });
 
   return targets;
-}
-
-/**
- * Ищет валюту в свободном тексте ответа.
- *
- * @param freeText - ответ кандидата
- * @returns валюта или null
- */
-function detectCurrency(freeText: string): (typeof CURRENCIES)[number] | null {
-  const upper = freeText.toUpperCase();
-
-  for (const currency of CURRENCIES) {
-    if (upper.includes(currency)) {
-      return currency;
-    }
-  }
-
-  return null;
 }
 
 /** Отрицание перед «удалить»: между отрицанием и словом до двух служебных. */

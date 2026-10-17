@@ -106,6 +106,35 @@ describe("applyAnswer()", () => {
     expect((await readStatus())?.currency).toBe("USD");
   });
 
+  it('currency_missing + "руб" -> currency RUB', async () => {
+    await applyAnswer(question({ type: "currency_missing" }), answer({ freeText: "руб" }), join(dir, "facts.json"));
+
+    expect((await readStatus())?.currency).toBe("RUB");
+  });
+
+  it('currency_missing + "$" -> currency USD', async () => {
+    await applyAnswer(question({ type: "currency_missing" }), answer({ freeText: "$" }), join(dir, "facts.json"));
+
+    expect((await readStatus())?.currency).toBe("USD");
+  });
+
+  it('currency_missing + "€" -> currency EUR', async () => {
+    await applyAnswer(question({ type: "currency_missing" }), answer({ freeText: "€" }), join(dir, "facts.json"));
+
+    expect((await readStatus())?.currency).toBe("EUR");
+  });
+
+  it('currency_missing + "непонятно" -> warning, currency остаётся null', async () => {
+    const result = await applyAnswer(
+      question({ type: "currency_missing" }),
+      answer({ freeText: "непонятно" }),
+      join(dir, "facts.json"),
+    );
+
+    expect(result.warnings.some((warning) => warning.code === "answer_unclear")).toBe(true);
+    expect((await readStatus())?.currency).toBeNull();
+  });
+
   it('target_vs_measured + "target" -> remove', async () => {
     await applyAnswer(
       question({ type: "target_vs_measured" }),

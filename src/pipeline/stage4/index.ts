@@ -99,8 +99,6 @@ export async function runStage4a(params: Stage4aParams): Promise<Stage4aResult> 
     const roles = roleConfig.targets.map((target) => target.id);
 
     if (claims.length === 0) {
-      const roleConfig = await loadRoleConfig(params.rolesConfigPath);
-
       return {
         generatedAt: new Date().toISOString(),
         facts: await emptyFacts(params, roleConfig.targets),
