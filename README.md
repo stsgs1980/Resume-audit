@@ -155,7 +155,7 @@ npm run dev
 | `npm run lint:md`           | markdownlint                          |
 | `npm run format`            | Prettier (запись)                     |
 | `npm run format:check`      | Prettier (проверка, как в CI)         |
-| `npm test`                  | Vitest (319 тестов)                   |
+| `npm test`                  | Vitest (494 теста)                    |
 | `npm run test:watch`        | Vitest (watch)                        |
 | `npm run test:coverage`     | Vitest + coverage                     |
 | `npm run check:file-length` | Проверка длины файлов (лимит 250)     |
