@@ -21,7 +21,13 @@ function messageText(message: unknown): string | null {
   const parts = Array.isArray(direct) ? direct : Array.isArray(nested) ? nested : [];
 
   for (const part of parts) {
-    const text = (part as Record<string, unknown>)?.["text"];
+    const recordPart = part as Record<string, unknown>;
+
+    if (recordPart["type"] !== "text") {
+      continue;
+    }
+
+    const text = recordPart["text"];
 
     if (typeof text === "string" && text.length > 0) {
       return text;
