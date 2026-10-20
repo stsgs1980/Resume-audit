@@ -2,7 +2,7 @@ import type { ZodType } from "zod";
 import type { LlmTransport } from "./client";
 import { waitForAssistant } from "./polling";
 import type { LlmCallResult, LlmConfig, SessionInfo } from "./types";
-import { LlmTransportError } from "./types";
+import { LlmTransportError, unwrapEnvelope } from "./types";
 
 /** Суффикс ретрая: напоминание вернуть только JSON. */
 const RETRY_SUFFIX = "\n\nПредыдущий ответ не прошёл проверку. Верни ТОЛЬКО валидный JSON, без пояснений.";
@@ -78,6 +78,31 @@ function buildPromptText(system: string, user: string, isRetry: boolean): string
 }
 
 /**
+ * Достаёт id prompt-сообщения из ответа POST /prompt.
+ * Ответ с assistant-сообщением не используется как маркер.
+ *
+ * @param posted - ответ сервера на POST prompt
+ * @returns id пользовательского сообщения или null
+ */
+function promptMessageId(posted: unknown): string | null {
+  const body = unwrapEnvelope<unknown>(posted);
+
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return null;
+  }
+
+  const record = body as Record<string, unknown>;
+
+  if (record["type"] === "assistant" || record["role"] === "assistant") {
+    return null;
+  }
+
+  const id = record["id"];
+
+  return typeof id === "string" ? id : null;
+}
+
+/**
  * Вызов с structured output: POST prompt, polling, парсинг, Zod, retry.
  *
  * @param transport - транспорт
@@ -111,9 +136,11 @@ export async function callWithSchema<T>(
         ),
         config.timeoutMs,
       );
-      void posted;
-
-      const waited = await withTimeout(waitForAssistant(transport, session.id, config.timeoutMs), config.timeoutMs);
+      const promptId = promptMessageId(posted);
+      const waited = await withTimeout(
+        waitForAssistant(transport, session.id, config.timeoutMs, promptId ?? undefined),
+        config.timeoutMs,
+      );
 
       if ("assistantError" in waited) {
         return {

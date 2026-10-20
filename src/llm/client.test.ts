@@ -18,13 +18,15 @@ const config: LlmConfig = {
 };
 
 const assistantMessages = (text: string) => ({
-  data: [{ type: "assistant", content: [{ type: "text", text }] }],
+  data: [
+    { type: "assistant", content: [{ type: "text", text }] },
+    { id: "msg_1", type: "user" },
+  ],
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
-
 describe("health()", () => {
   it("true на 200 + version", async () => {
     const mock = createMockFetch();
@@ -59,7 +61,6 @@ describe("health()", () => {
     expect(await client.health()).toBe(false);
   });
 });
-
 describe("createFetchLlmClient", () => {
   it("отклоняет baseUrl без /api", () => {
     expect(() => createFetchLlmClient({ ...config, baseUrl: "http://x:1" })).toThrow(/\/api/);

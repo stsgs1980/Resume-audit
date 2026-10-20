@@ -5,6 +5,67 @@ import { LlmTransportError, unwrapEnvelope } from "./types";
 const POLL_INTERVAL_MS = 500;
 
 /**
+ * Проверяет, что значение является объектом.
+ *
+ * @param value - проверяемое значение
+ * @returns true для обычного объекта
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Достаёт время создания сообщения.
+ *
+ * @param message - сообщение
+ * @returns миллисекунды или null
+ */
+function messageCreated(message: unknown): number | null {
+  if (!isRecord(message) || !isRecord(message["time"])) {
+    return null;
+  }
+
+  const created = message["time"]["created"];
+
+  return typeof created === "number" ? created : null;
+}
+
+/**
+ * Оставляет только сообщения, созданные после prompt-сообщения.
+ *
+ * @param messages - все сообщения сессии
+ * @param sinceMessageId - id prompt-сообщения
+ * @returns сообщения нового ответа
+ */
+function messagesForPrompt(messages: unknown[], sinceMessageId?: string): unknown[] {
+  if (sinceMessageId === undefined) {
+    return messages;
+  }
+
+  const markerIndex = messages.findIndex((message) => isRecord(message) && message["id"] === sinceMessageId);
+
+  if (markerIndex < 0) {
+    return [];
+  }
+
+  const markerCreated = messageCreated(messages[markerIndex]);
+
+  if (markerCreated !== null) {
+    return messages.filter((message, index) => {
+      if (index === markerIndex) {
+        return false;
+      }
+
+      const created = messageCreated(message);
+
+      return created !== null && created >= markerCreated;
+    });
+  }
+
+  return messages.slice(0, markerIndex);
+}
+
+/**
  * Достаёт текст первого текстового фрагмента ассистента.
  *
  * @param message - сообщение 2.0.28 или SDK-формы
@@ -71,12 +132,14 @@ function assistantError(messages: unknown): unknown {
  * @param transport - транспорт
  * @param sessionId - id сессии
  * @param timeoutMs - общий лимит ожидания
+ * @param sinceMessageId - id prompt-сообщения, после которого ждём ответ
  * @returns текст ассистента или его ошибка
  */
 export async function waitForAssistant(
   transport: LlmTransport,
   sessionId: string,
   timeoutMs: number,
+  sinceMessageId?: string,
 ): Promise<{ text: string } | { assistantError: unknown }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -91,14 +154,14 @@ export async function waitForAssistant(
 
       const body = unwrapEnvelope<unknown>(await transport.get(`/session/${sessionId}/message`, controller.signal));
       const messages = Array.isArray(body) ? body : [];
-
-      const text = messages.map(messageText).find((entry) => entry !== null);
+      const fresh = messagesForPrompt(messages, sinceMessageId);
+      const text = fresh.map(messageText).find((entry) => entry !== null);
 
       if (text !== undefined && text !== null) {
         return { text };
       }
 
-      const error = assistantError(messages);
+      const error = assistantError(fresh);
 
       if (error !== null) {
         return { assistantError: error };

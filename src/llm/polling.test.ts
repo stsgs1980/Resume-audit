@@ -118,4 +118,40 @@ describe("waitForAssistant()", () => {
 
     await expect(promise).resolves.toEqual({ text: '{"claims":[]}' });
   });
+
+  it("игнорирует старый text до prompt-сообщения", async () => {
+    const oldAssistant = {
+      id: "msg_old",
+      type: "assistant",
+      time: { created: 1 },
+      content: [{ type: "text", text: '{"old":true}' }],
+    };
+    const prompt = { id: "msg_prompt", type: "user", time: { created: 2 } };
+    const transport = mockTransport(messages([prompt, oldAssistant]));
+    let settled = false;
+    const promise = waitForAssistant(transport, "ses_1", 5000, "msg_prompt");
+    void promise.finally(() => {
+      settled = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(settled).toBe(false);
+
+    transport.setResponse(
+      messages([
+        {
+          id: "msg_new",
+          type: "assistant",
+          time: { created: 3 },
+          content: [{ type: "text", text: '{"new":true}' }],
+        },
+        prompt,
+        oldAssistant,
+      ]),
+    );
+    await vi.advanceTimersByTimeAsync(500);
+
+    await expect(promise).resolves.toEqual({ text: '{"new":true}' });
+  });
 });

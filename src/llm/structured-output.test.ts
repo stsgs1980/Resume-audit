@@ -19,7 +19,10 @@ const params = { system: "s", user: "u", schema: z.object({ a: z.number() }) };
 
 const accept = { data: { id: "msg_1" } };
 const assistant = (text: string) => ({
-  data: [{ type: "assistant", content: [{ type: "text", text }] }],
+  data: [
+    { type: "assistant", content: [{ type: "text", text }] },
+    { id: "msg_1", type: "user" },
+  ],
 });
 
 afterEach(() => {
@@ -65,6 +68,30 @@ describe("callWithSchema()", () => {
     const result = await callWithSchema(createLlmTransport(config.baseUrl, "pw"), config, session, params);
 
     expect(result).toEqual({ ok: true, data: { a: 1 } });
+  });
+
+  it("ждёт ответ после prompt-сообщения, а не старый text", async () => {
+    const mock = createMockFetch();
+
+    vi.stubGlobal("fetch", mock.fetch);
+    mock.respondJson({ data: { id: "msg_prompt", type: "user" } });
+    mock.respondJson({
+      data: [
+        { id: "msg_prompt", type: "user" },
+        { id: "msg_old", type: "assistant", content: [{ type: "text", text: '{"a":0}' }] },
+      ],
+    });
+    mock.respondJson({
+      data: [
+        { id: "msg_new", type: "assistant", content: [{ type: "text", text: '{"a":7}' }] },
+        { id: "msg_prompt", type: "user" },
+        { id: "msg_old", type: "assistant", content: [{ type: "text", text: '{"a":0}' }] },
+      ],
+    });
+
+    const result = await callWithSchema(createLlmTransport(config.baseUrl, "pw"), config, session, params);
+
+    expect(result).toEqual({ ok: true, data: { a: 7 } });
   });
 
   it("JSON в markdown-обёртке извлекается", async () => {
