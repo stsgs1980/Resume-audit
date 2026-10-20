@@ -18,8 +18,9 @@ const ALL_ROLES: GenerationRoleId[] = ["sales", "salesops", "aipo"];
  *
  * @param resumesDir - директория версий (stage-state рядом, на уровень выше)
  * @param generated - сгенерированные версии
+ * @param stale - пометить версии stale из-за частичного сбоя
  */
-async function updateStageState(resumesDir: string, generated: GeneratedResume[]): Promise<void> {
+async function updateStageState(resumesDir: string, generated: GeneratedResume[], stale: boolean): Promise<void> {
   const stageStatePath = join(dirname(resumesDir), "stage-state.json");
   let state: StageState;
 
@@ -35,7 +36,7 @@ async function updateStageState(resumesDir: string, generated: GeneratedResume[]
       prompt_version: resume.promptVersion,
       model_id: resume.modelId,
       generated_at: resume.generatedAt,
-      stale: false,
+      stale,
     };
   }
 
@@ -113,7 +114,7 @@ export async function runStage7(params: Stage7Params): Promise<Stage7Result> {
   }
 
   try {
-    await updateStageState(params.resumesDir, result.generated);
+    await updateStageState(params.resumesDir, result.generated, result.errors.length > 0);
   } catch (error) {
     result.warnings.push({ code: "stage_state_failed", message: (error as Error).message });
   }

@@ -1,17 +1,16 @@
-import { readdir } from "node:fs/promises";
-import { basename, dirname, join } from "node:path";
+import { basename, join } from "node:path";
 import { z } from "zod";
 import type { ResumeResponse } from "../../llm/schemas";
 import type { Facts } from "../../schemas/facts";
 import { factsSchema } from "../../schemas/facts";
-import type { StageState } from "../../schemas/stage-state";
-import { stageStateSchema } from "../../schemas/stage-state";
 import { validationSchema } from "../../schemas/validation";
 import { readJson, writeJsonAtomic } from "../../server/storage/files";
 import { hashFacts } from "../../server/storage/hash";
 import { computeBlockReason, isBlocked } from "./block";
 import { verifyLayer1 } from "./layer1";
 import { verifyLayer2 } from "./layer2";
+import { selectVersions } from "./select-versions";
+import { updateStageState } from "./stage-state";
 import type { Stage8Params, Stage8Result, ValidationResult } from "./types";
 
 /** Схема чтения lock-файла: новый объект или legacy-строка. */
@@ -64,36 +63,23 @@ function extractDocument(parsed: Record<string, unknown>): ResumeResponse | null
 }
 
 /**
- * Обновляет stage-state.json итогами проверки версий.
+ * Фиксирует итог этапа в stage-state и запрещает экспорт при ошибках.
+ * Вызывается на каждом пути завершения, включая ранние ошибки.
  *
- * @param validationDir - директория validation (stage-state рядом, на уровень выше)
- * @param validated - проверенные версии
+ * @param result - накопленный итог этапа
+ * @param params - параметры запуска
+ * @returns void
  */
-async function updateStageState(validationDir: string, validated: ValidationResult[]): Promise<void> {
-  const stageStatePath = join(dirname(validationDir), "stage-state.json");
-  let state: StageState;
+async function finalizeStage8(result: Stage8Result, params: Stage8Params): Promise<void> {
+  if (result.errors.length > 0) {
+    result.exportBlocked = true;
+  }
 
   try {
-    state = await readJson(stageStatePath, stageStateSchema);
-  } catch {
-    state = { run_id: "", stages: {}, documents: {} };
+    await updateStageState(params.validationDir, result.validated, result.errors, params.versionIds);
+  } catch (error) {
+    result.warnings.push({ code: "stage_state_failed", message: (error as Error).message });
   }
-
-  const failed = validated.some((entry) => entry.blocked);
-
-  state.stages["verification"] = { status: failed ? "blocked" : "completed", updated_at: new Date().toISOString() };
-
-  for (const entry of validated) {
-    state.documents[entry.versionId] = {
-      facts_hash: entry.factsHash,
-      ...(entry.promptVersion === null ? {} : { prompt_version: entry.promptVersion }),
-      ...(entry.modelId === null ? {} : { model_id: entry.modelId }),
-      generated_at: entry.validatedAt,
-      stale: entry.blocked,
-    };
-  }
-
-  await writeJsonAtomic(stageStatePath, state);
 }
 
 /**
@@ -108,6 +94,7 @@ export async function runStage8(params: Stage8Params): Promise<Stage8Result> {
 
   if (!(await isLocked(params.lockPath))) {
     result.errors.push({ versionId: "", reason: "facts.json не в состоянии locked" });
+    await finalizeStage8(result, params);
 
     return result;
   }
@@ -118,19 +105,22 @@ export async function runStage8(params: Stage8Params): Promise<Stage8Result> {
     facts = await readJson(params.factsPath, factsSchema);
   } catch (error) {
     result.errors.push({ versionId: "", reason: (error as Error).message });
+    await finalizeStage8(result, params);
 
     return result;
   }
 
-  let files: string[];
+  const selected = await selectVersions(params.resumesDir, params.versionIds);
 
-  try {
-    files = (await readdir(params.resumesDir)).filter((name) => /^hh_v1_.+\.json$/.test(name));
-  } catch (error) {
-    result.errors.push({ versionId: "", reason: (error as Error).message });
+  result.errors.push(...selected.errors);
+
+  if (selected.files.length === 0) {
+    await finalizeStage8(result, params);
 
     return result;
   }
+
+  const files = selected.files;
 
   const useLayer2 = params.enableLayer2 ?? true;
   const factsHash = hashFacts(facts);
@@ -183,9 +173,9 @@ export async function runStage8(params: Stage8Params): Promise<Stage8Result> {
       const validatedEntry = validationSchema.safeParse(entry);
 
       if (!validatedEntry.success) {
-        result.warnings.push({
-          code: "validation_schema_mismatch",
-          message: `${versionId}: ${JSON.stringify(validatedEntry.error.issues)}`,
+        result.errors.push({
+          versionId,
+          reason: `validation schema mismatch: ${JSON.stringify(validatedEntry.error.issues)}`,
         });
 
         continue;
@@ -199,12 +189,7 @@ export async function runStage8(params: Stage8Params): Promise<Stage8Result> {
   }
 
   result.exportBlocked = result.validated.some((entry) => entry.blocked);
-
-  try {
-    await updateStageState(params.validationDir, result.validated);
-  } catch (error) {
-    result.warnings.push({ code: "stage_state_failed", message: (error as Error).message });
-  }
+  await finalizeStage8(result, params);
 
   return result;
 }

@@ -122,6 +122,8 @@ export interface Stage8Params {
   promptConfig: { promptsDir: string };
   /** Id модели слоя 2. */
   modelId: string;
+  /** Проверять только эти версии; по умолчанию все файлы resumes/. */
+  versionIds?: string[];
   /** Включить слой 2, по умолчанию true. */
   enableLayer2?: boolean;
 }

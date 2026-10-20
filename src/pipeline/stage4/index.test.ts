@@ -27,6 +27,7 @@ const params = (): Stage4aParams => ({
   claimsPath: join(dir, "claims.json"),
   factsPath: join(dir, "facts.json"),
   auditPath: join(dir, "audit.json"),
+  lockPath: join(dir, "facts.lock"),
   rolesConfigPath: "config/roles/sales.json",
   auditDate: "2026-10-09",
   geography: "Москва",
@@ -55,6 +56,110 @@ describe("runStage4a()", () => {
     expect(result.facts.confirmed_skills).toEqual([]);
     expect(result.facts.portfolio_projects).toEqual([]);
     expect(factsSchema.safeParse(result.facts).success).toBe(true);
+  });
+
+  it("пустой claims.json без ошибок -> facts.json записан", async () => {
+    await writeClaims([]);
+
+    const result = await runStage4a(params());
+    const stored = JSON.parse(await readFile(join(dir, "facts.json"), "utf8")) as { jobs: unknown[] };
+
+    expect(result.written).toBe(true);
+    expect(stored.jobs).toEqual([]);
+  });
+
+  it("claims.json отсутствует, facts.json существует -> facts не перезаписан", async () => {
+    await writeClaims([claim()]);
+    await runStage4a(params());
+
+    const before = await readFile(join(dir, "facts.json"), "utf8");
+
+    await rm(join(dir, "claims.json"));
+
+    const result = await runStage4a(params());
+    const after = await readFile(join(dir, "facts.json"), "utf8");
+
+    expect(result.written).toBe(false);
+    expect(result.warnings.some((warning) => warning.code === "claims_missing")).toBe(true);
+    expect(after).toBe(before);
+  });
+
+  it("пустой claims.json при существующих facts -> facts не перезаписан", async () => {
+    await writeClaims([claim()]);
+    await runStage4a(params());
+
+    const before = await readFile(join(dir, "facts.json"), "utf8");
+
+    await writeClaims([]);
+
+    const result = await runStage4a(params());
+    const after = await readFile(join(dir, "facts.json"), "utf8");
+
+    expect(result.written).toBe(false);
+    expect(result.warnings.some((warning) => warning.code === "claims_empty")).toBe(true);
+    expect(after).toBe(before);
+  });
+
+  it("повторный прогон сохраняет candidate_name и geography", async () => {
+    await writeClaims([claim()]);
+    await runStage4a({ ...params(), candidateName: "Иван", geography: "Санкт-Петербург" });
+
+    const result = await runStage4a({ ...params(), candidateName: undefined, geography: undefined });
+
+    expect(result.facts.meta.candidate_name).toBe("Иван");
+    expect(result.facts.meta.geography).toBe("Санкт-Петербург");
+  });
+
+  it("изменение фактов сбрасывает locked в draft, неизменные сохраняют lock", async () => {
+    await writeClaims([claim()]);
+    await runStage4a(params());
+    await writeFile(
+      join(dir, "facts.lock"),
+      JSON.stringify({ state: "locked", lockedAt: "2026-10-09T00:00:00.000Z" }),
+      "utf8",
+    );
+
+    const same = await runStage4a(params());
+    const afterSame = JSON.parse(await readFile(join(dir, "facts.lock"), "utf8")) as { state: string };
+
+    expect(same.written).toBe(true);
+    expect(afterSame.state).toBe("locked");
+
+    await writeClaims([
+      claim({
+        id: "claim2",
+        statement: "работал в компании Лютик",
+        quote: "работал в компании Лютик с 2020-01 по 2021-01",
+      }),
+    ]);
+    const changed = await runStage4a(params());
+    const afterChanged = JSON.parse(await readFile(join(dir, "facts.lock"), "utf8")) as { state: string };
+
+    expect(changed.written).toBe(true);
+    expect(afterChanged.state).toBe("draft");
+  });
+
+  it("lockPath не передан -> lock рядом с facts.json сбрасывается", async () => {
+    await writeClaims([claim()]);
+    await runStage4a(params());
+    await writeFile(
+      join(dir, "facts.lock"),
+      JSON.stringify({ state: "locked", lockedAt: "2026-10-09T00:00:00.000Z" }),
+      "utf8",
+    );
+
+    await writeClaims([
+      claim({
+        id: "claim2",
+        statement: "работал в компании Лютик",
+        quote: "работал в компании Лютик с 2020-01 по 2021-01",
+      }),
+    ]);
+    const result = await runStage4a({ ...params(), lockPath: undefined });
+    const lock = JSON.parse(await readFile(join(dir, "facts.lock"), "utf8")) as { state: string };
+
+    expect(result.written).toBe(true);
+    expect(lock.state).toBe("draft");
   });
 
   it("смешанный набор -> jobs, education, languages, skills", async () => {

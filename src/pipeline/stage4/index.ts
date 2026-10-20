@@ -1,53 +1,63 @@
-import { auditSchema } from "../../schemas/audit";
 import { claimsSchema } from "../../schemas/claims";
 import type { Facts } from "../../schemas/facts";
-import { factsSchema } from "../../schemas/facts";
-import { readJson, writeJsonAtomic } from "../../server/storage/files";
-import { hashFacts, hashMeta } from "../../server/storage/hash";
-import { invalidateAllDocuments } from "../../server/storage/stage-state";
+import { fileExists, readJson } from "../../server/storage/files";
 import { loadRoleConfig } from "../stage3/ats";
 import { buildEducation, buildLanguages, buildProjects, buildSkills } from "./build-entities";
 import { buildJobs, buildResults } from "./build-jobs";
 import { buildMeta } from "./build-meta";
+import { readFacts } from "./facts-lock";
+import { persistFacts } from "./persist";
 import type { Claim, Stage4aParams, Stage4aResult, Stage4Warning } from "./types";
+
+/** Итог чтения claims.json. */
+interface LoadedClaims {
+  /** Утверждения. */
+  claims: Claim[];
+  /** Ошибка чтения или null. */
+  error: string | null;
+  /** Файл существует. */
+  found: boolean;
+}
 
 /**
  * Читает утверждения из claims.json.
  *
  * @param claimsPath - путь к claims.json
- * @returns утверждения и текст ошибки чтения (null при успехе)
+ * @returns утверждения, ошибка чтения и признак наличия файла
  */
-async function loadClaims(claimsPath: string): Promise<{ claims: Claim[]; error: string | null }> {
+async function loadClaims(claimsPath: string): Promise<LoadedClaims> {
   try {
     const parsed = await readJson(claimsPath, claimsSchema);
 
-    return { claims: parsed.claims, error: null };
+    return { claims: parsed.claims, error: null, found: true };
   } catch (error) {
     if ((error as Error).name === "FileNotFoundError") {
-      return { claims: [], error: null };
+      return { claims: [], error: null, found: false };
     }
 
-    return { claims: [], error: (error as Error).message };
+    return { claims: [], error: (error as Error).message, found: false };
   }
 }
 
 /**
- * Обновляет audit.json хешами записанных фактов.
- * audit.json отсутствует — тихо пропускается.
+ * Собирает meta, сохраняя имя и географию из существующих фактов.
  *
- * @param auditPath - путь к audit.json
- * @param facts - записанные факты
+ * @param params - параметры этапа
+ * @param targets - цели из конфига роли
+ * @param existing - существующие факты или null
+ * @returns meta для facts.json
  */
-async function updateAuditHashes(auditPath: string, facts: Facts): Promise<void> {
-  try {
-    const audit = await readJson(auditPath, auditSchema);
-
-    await writeJsonAtomic(auditPath, { ...audit, facts_hash: hashFacts(facts), meta_hash: hashMeta(facts) });
-  } catch (error) {
-    if ((error as Error).name !== "FileNotFoundError") {
-      throw error;
-    }
-  }
+function buildStageMeta(
+  params: Stage4aParams,
+  targets: Array<{ id: string; title: string; share: number }>,
+  existing: Facts | null,
+): Facts["meta"] {
+  return buildMeta({
+    candidateName: params.candidateName ?? existing?.meta.candidate_name ?? "",
+    auditDate: params.auditDate,
+    geography: params.geography ?? existing?.meta.geography ?? "Москва",
+    targets,
+  });
 }
 
 /**
@@ -55,25 +65,59 @@ async function updateAuditHashes(auditPath: string, facts: Facts): Promise<void>
  *
  * @param params - параметры этапа
  * @param targets - цели из конфига роли
+ * @param existing - существующие факты или null
  * @returns факты без записей
  */
 async function emptyFacts(
   params: Stage4aParams,
   targets: Array<{ id: string; title: string; share: number }>,
+  existing: Facts | null,
 ): Promise<Facts> {
   return {
     schema_version: 1,
-    meta: buildMeta({
-      candidateName: params.candidateName ?? "",
-      auditDate: params.auditDate,
-      geography: params.geography ?? "Москва",
-      targets,
-    }),
+    meta: buildStageMeta(params, targets, existing),
     jobs: [],
     education: [],
     languages: [],
     confirmed_skills: [],
     portfolio_projects: [],
+  };
+}
+
+/**
+ * Собирает факты из утверждений и конфига ролей.
+ *
+ * @param params - параметры этапа
+ * @param claims - утверждения
+ * @param targets - цели из конфига роли
+ * @param existing - существующие факты или null
+ * @param warnings - накопитель предупреждений
+ * @returns факты
+ */
+function assembleFacts(
+  params: Stage4aParams,
+  claims: Claim[],
+  targets: Array<{ id: string; title: string; share: number }>,
+  existing: Facts | null,
+  warnings: Stage4Warning[],
+): Facts {
+  const roles = targets.map((target) => target.id);
+  const builtJobs = buildJobs(claims, roles);
+
+  warnings.push(...builtJobs.warnings);
+
+  const withResults = buildResults(claims, builtJobs.jobs, roles);
+
+  warnings.push(...withResults.warnings);
+
+  return {
+    schema_version: 1,
+    meta: buildStageMeta(params, targets, existing),
+    jobs: withResults.jobs,
+    education: buildEducation(claims),
+    languages: buildLanguages(claims),
+    confirmed_skills: buildSkills(claims, roles),
+    portfolio_projects: buildProjects(claims, roles),
   };
 }
 
@@ -86,89 +130,50 @@ async function emptyFacts(
  */
 export async function runStage4a(params: Stage4aParams): Promise<Stage4aResult> {
   const warnings: Stage4Warning[] = [];
+  const generatedAt = new Date().toISOString();
 
   try {
     const loaded = await loadClaims(params.claimsPath);
+    const roleConfig = await loadRoleConfig(params.rolesConfigPath);
+    const existing = await readFacts(params.factsPath);
 
     if (loaded.error !== null) {
       warnings.push({ code: "claims_unreadable", message: loaded.error });
-    }
 
-    const claims = loaded.claims;
-    const roleConfig = await loadRoleConfig(params.rolesConfigPath);
-    const roles = roleConfig.targets.map((target) => target.id);
-
-    if (claims.length === 0) {
       return {
-        generatedAt: new Date().toISOString(),
-        facts: await emptyFacts(params, roleConfig.targets),
+        generatedAt,
+        facts: await emptyFacts(params, roleConfig.targets, existing),
         written: false,
         warnings,
       };
     }
 
-    const builtJobs = buildJobs(claims, roles);
-
-    warnings.push(...builtJobs.warnings);
-
-    const withResults = buildResults(claims, builtJobs.jobs, roles);
-
-    warnings.push(...withResults.warnings);
-
-    const facts: Facts = {
-      schema_version: 1,
-      meta: buildMeta({
-        candidateName: params.candidateName ?? "",
-        auditDate: params.auditDate,
-        geography: params.geography ?? "Москва",
-        targets: roleConfig.targets,
-      }),
-      jobs: withResults.jobs,
-      education: buildEducation(claims),
-      languages: buildLanguages(claims),
-      confirmed_skills: buildSkills(claims, roles),
-      portfolio_projects: buildProjects(claims, roles),
-    };
-    const validated = factsSchema.safeParse(facts);
-
-    if (!validated.success) {
-      warnings.push({
-        code: "schema_mismatch",
-        message: `facts.json не прошёл схему: ${JSON.stringify(validated.error.issues)}`,
-      });
-
-      return { generatedAt: new Date().toISOString(), facts, written: false, warnings };
+    if (!loaded.found) {
+      warnings.push({ code: "claims_missing", message: "claims.json не найден" });
+    } else if (loaded.claims.length === 0) {
+      warnings.push({ code: "claims_empty", message: "claims.json не содержит утверждений" });
     }
 
-    try {
-      await writeJsonAtomic(params.factsPath, validated.data);
-    } catch (error) {
-      warnings.push({ code: "write_failed", message: (error as Error).message });
-
-      return { generatedAt: new Date().toISOString(), facts, written: false, warnings };
+    if ((!loaded.found || loaded.claims.length === 0) && (await fileExists(params.factsPath))) {
+      return {
+        generatedAt,
+        facts: await emptyFacts(params, roleConfig.targets, existing),
+        written: false,
+        warnings,
+      };
     }
 
-    try {
-      await updateAuditHashes(params.auditPath, validated.data);
-    } catch (error) {
-      warnings.push({ code: "audit_update_failed", message: (error as Error).message });
-    }
-
-    if (params.storageConfig !== undefined && params.slug !== undefined) {
-      try {
-        await invalidateAllDocuments(params.storageConfig, params.slug, hashFacts(validated.data));
-      } catch (error) {
-        warnings.push({ code: "invalidate_failed", message: (error as Error).message });
-      }
-    }
-
-    return { generatedAt: new Date().toISOString(), facts, written: true, warnings };
+    return await persistFacts(
+      params,
+      assembleFacts(params, loaded.claims, roleConfig.targets, existing, warnings),
+      warnings,
+    );
   } catch (error) {
     warnings.push({ code: "stage4_error", message: (error as Error).message });
 
     return {
-      generatedAt: new Date().toISOString(),
-      facts: await emptyFacts(params, []),
+      generatedAt,
+      facts: await emptyFacts(params, [], null),
       written: false,
       warnings,
     };

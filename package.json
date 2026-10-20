@@ -84,6 +84,7 @@
     "test:coverage": "vitest run --coverage",
     "prepare": "husky",
     "review": "tsx scripts/review.ts",
+    "pipeline": "tsx scripts/pipeline.ts",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -o CHANGELOG.md"
   },
   "engines": {

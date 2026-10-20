@@ -26,6 +26,8 @@ export interface Stage4aParams {
   factsPath: string;
   /** Путь к audit.json (для чтения open_questions в 4b). */
   auditPath: string;
+  /** Путь к facts.lock для сброса устаревшей блокировки (опционально). */
+  lockPath?: string;
   /** Путь к конфигу роли. */
   rolesConfigPath: string;
   /** Дата аудита YYYY-MM-DD. */

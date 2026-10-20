@@ -183,7 +183,12 @@ export async function runStage3a(params: Stage3aParams): Promise<Stage3aResult> 
  */
 export async function runStage3(params: Stage3Params): Promise<AuditResult> {
   const stage3a = await runStage3a(params);
-  let stage3b: { roles: AuditResult["roles"]; ats: AuditResult["ats"]; warnings: AuditWarning[] };
+  let stage3b: {
+    roles: AuditResult["roles"];
+    ats: AuditResult["ats"];
+    warnings: AuditWarning[];
+    errors: Array<{ source: string; reason: string }>;
+  };
 
   try {
     stage3b = await runStage3b(params);
@@ -192,10 +197,16 @@ export async function runStage3(params: Stage3Params): Promise<AuditResult> {
       roles: [],
       ats: null,
       warnings: [{ id: "warn0", kind: "stage3_error", message: (error as Error).message }],
+      errors: [],
     };
   }
 
-  const warnings = [...stage3a.warnings, ...stage3b.warnings];
+  const stage3bErrors = stage3b.errors.map((entry, index) => ({
+    id: `warn3b${index + 1}`,
+    kind: "stage3_error",
+    message: `${entry.source}: ${entry.reason}`,
+  }));
+  const warnings = [...stage3a.warnings, ...stage3b.warnings, ...stage3bErrors];
   const result: AuditResult = {
     facts_hash: stage3a.factsHash,
     meta_hash: stage3a.metaHash,
