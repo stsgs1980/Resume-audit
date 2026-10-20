@@ -16,12 +16,50 @@
    результат отдела без личного вклада, прогноз или целевая метрика),
    укажи requires_hedge: true.
 
-Формат ответа:
+Формат ответа — строго JSON:
 
 ```json
 {
   "claims": [
-    { "statement": "...", "quote": "...", "source_file": "...", "category": "...", "status": "...", "reason": "..." }
+    {
+      "statement": "string, непустой",
+      "quote": "string, непустой, дословная цитата",
+      "source_file": "string, имя файла",
+      "category": "одно из: employment | result | skill | tool | education | language | project | link",
+      "metric_type": "одно из: выручка | конверсия | текучесть | объём продаж | товарооборот | команда | затраты | производительность | срок | иное",
+      "number": "number или null",
+      "currency": "одно из: RUB | USD | EUR | null",
+      "status": "одно из: confirmed | needs_evidence | remove",
+      "reason": "string, непустой"
+    }
+  ]
+}
+```
+
+КРИТИЧНО:
+
+- category: только из списка выше. Не выдумывай новые значения.
+- status: только confirmed, needs_evidence или remove.
+- metric_type: только из списка выше.
+- number и currency: null, если числа нет.
+- Если не можешь заполнить поле по правилам — не включай claim.
+
+Пример правильного claim:
+
+```json
+{
+  "claims": [
+    {
+      "statement": "Выручка выросла на 4,2 млн рублей",
+      "quote": "Выручка выросла на 4,2 млн рублей",
+      "source_file": "resume.txt",
+      "category": "result",
+      "metric_type": "выручка",
+      "number": 4200000,
+      "currency": "RUB",
+      "status": "confirmed",
+      "reason": "Цифра прямо названа в опыте кандидата."
+    }
   ]
 }
 ```

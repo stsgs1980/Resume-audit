@@ -453,6 +453,10 @@ API 2.0.28 не имеет structured output. Мы просим LLM вернут
 
 Назначение: извлечение утверждений из исходных файлов (этап 2).
 
+Промт `extraction.v1.md` перечисляет допустимые значения `category`,
+`metric_type`, `status` и `currency` и требует `null` для отсутствующих
+чисел.
+
 Форма: `{ claims: [...] }`. Поля claim: `statement`, `quote`
 (min 1), `source_file`, `category` (employment | result | skill |
 tool | education | language | project | link), `metric_type`,
