@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { LlmClient } from "../../llm/client";
+import { extractionResponseSchema } from "../../llm/schemas";
 import type { LlmCallResult } from "../../llm/types";
 import type { FileEntry } from "../stage1/types";
-import { extractClaimsFromFile } from "./extract";
+import { extractClaimsFromFile, softenExtractionResponse } from "./extract";
 
 const file: FileEntry = {
   path: "resume.docx",
@@ -15,6 +16,25 @@ const file: FileEntry = {
 };
 
 const promptConfig = { promptsDir: "config/prompts" };
+
+/**
+ * Валидный claim для тестов смягчения.
+ *
+ * @param overrides - переопределённые поля
+ * @returns claim
+ */
+const validClaim = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  statement: "рост",
+  quote: "выручка выросла",
+  source_file: "resume.docx",
+  category: "result",
+  metric_type: "выручка",
+  number: 1,
+  currency: null,
+  status: "confirmed",
+  reason: "",
+  ...overrides,
+});
 
 const okClient = (claims: unknown[]): LlmClient => ({
   health: () => Promise.resolve(true),
@@ -47,7 +67,7 @@ describe("extractClaimsFromFile()", () => {
 
     const result = await extractClaimsFromFile(file, "текст", client, promptConfig);
 
-    expect(result).toEqual({ claims: [], error: "down" });
+    expect(result).toEqual({ claims: [], error: "down", warnings: [] });
   });
 
   it("успех -> claims из data", async () => {
@@ -67,7 +87,7 @@ describe("extractClaimsFromFile()", () => {
 
     const result = await extractClaimsFromFile(file, "текст", okClient(claims), promptConfig);
 
-    expect(result).toEqual({ claims, error: null });
+    expect(result).toEqual({ claims, error: null, warnings: [] });
   });
 
   it("user содержит текст файла", async () => {
@@ -99,5 +119,72 @@ describe("extractClaimsFromFile()", () => {
     await extractClaimsFromFile(file, "текст", client, promptConfig);
 
     expect(calls).toBe(1);
+  });
+
+  it("смягчает невалидный ответ и возвращает warnings", async () => {
+    const raw = { claims: [validClaim({ category: "achievement_metric", status: "supported" })] };
+
+    const result = await extractClaimsFromFile(file, "текст", okClient(raw.claims), promptConfig);
+
+    expect(result.claims[0]?.category).toBe("result");
+    expect(result.claims[0]?.status).toBe("needs_evidence");
+    expect(result.warnings.length).toBeGreaterThan(0);
+  });
+});
+
+describe("softenExtractionResponse()", () => {
+  it("корректный ответ -> без смягчений", () => {
+    const result = softenExtractionResponse({ claims: [validClaim()] }, extractionResponseSchema);
+
+    expect(result.data).not.toBeNull();
+    expect(result.data?.claims).toHaveLength(1);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("category achievement_metric -> result, warning", () => {
+    const result = softenExtractionResponse(
+      { claims: [validClaim({ category: "achievement_metric" })] },
+      extractionResponseSchema,
+    );
+
+    expect(result.data?.claims[0]?.category).toBe("result");
+    expect(result.warnings.join(" ")).toContain("category");
+  });
+
+  it("status supported -> needs_evidence, warning", () => {
+    const result = softenExtractionResponse(
+      { claims: [validClaim({ status: "supported" })] },
+      extractionResponseSchema,
+    );
+
+    expect(result.data?.claims[0]?.status).toBe("needs_evidence");
+    expect(result.warnings.join(" ")).toContain("status");
+  });
+
+  it("отсутствует number -> null, warning", () => {
+    const result = softenExtractionResponse({ claims: [validClaim({ number: undefined })] }, extractionResponseSchema);
+
+    expect(result.data?.claims[0]?.number).toBeNull();
+    expect(result.warnings.join(" ")).toContain("number");
+  });
+
+  it("отсутствуют metric_type и currency -> иное и null, warnings", () => {
+    const result = softenExtractionResponse(
+      { claims: [validClaim({ metric_type: undefined, currency: undefined })] },
+      extractionResponseSchema,
+    );
+
+    expect(result.data?.claims[0]?.metric_type).toBe("иное");
+    expect(result.data?.claims[0]?.currency).toBeNull();
+    expect(result.warnings.join(" ")).toContain("metric_type");
+    expect(result.warnings.join(" ")).toContain("currency");
+  });
+
+  it("полностью невалидный ответ -> null с ошибкой", () => {
+    const result = softenExtractionResponse({ foo: "bar" }, extractionResponseSchema);
+
+    expect(result.data).toBeNull();
+    expect(result.warnings.join(" ")).toContain("schema mismatch");
+    expect(result.warnings.join(" ")).toContain("claims");
   });
 });

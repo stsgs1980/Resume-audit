@@ -24,15 +24,21 @@ const DEFAULT_PARTIAL_DIR = "data/partial";
  * @param rootDir - корень исходных файлов
  * @param params - параметры этапа
  * @param nextId - следующий номер id
- * @returns утверждения файла, ошибки и следующий номер
+ * @returns утверждения файла, ошибки, предупреждения и следующий номер
  */
 async function processFile(
   entry: FileEntry,
   rootDir: string,
   params: Stage2Params,
   nextId: number,
-): Promise<{ claims: Claim[]; errors: Array<{ file: string; reason: string }>; nextId: number }> {
+): Promise<{
+  claims: Claim[];
+  errors: Array<{ file: string; reason: string }>;
+  warnings: string[];
+  nextId: number;
+}> {
   const errors: Array<{ file: string; reason: string }> = [];
+  const warnings: string[] = [];
   const rawClaims: RawClaim[] = [];
   const threshold = params.chunkThreshold ?? DEFAULT_CHUNK_THRESHOLD;
   const partialDir = params.partialDir ?? DEFAULT_PARTIAL_DIR;
@@ -45,14 +51,17 @@ async function processFile(
   } catch (error) {
     errors.push({ file: entry.path, reason: (error as Error).message });
 
-    return { claims: [], errors, nextId };
+    return { claims: [], errors, warnings, nextId };
   }
 
   const chunks = needsChunking(text, threshold) ? chunkText(text, threshold) : [text];
 
   for (const chunk of chunks) {
     try {
-      const { claims, error } = await extractClaimsFromFile(entry, chunk, params.llmClient, params.promptConfig);
+      const extracted = await extractClaimsFromFile(entry, chunk, params.llmClient, params.promptConfig);
+      const { claims, error } = extracted;
+
+      warnings.push(...extracted.warnings.map((warning) => `${entry.path}: ${warning}`));
 
       if (error !== null) {
         errors.push({ file: entry.path, reason: error });
@@ -70,7 +79,7 @@ async function processFile(
 
   const claims = validateAndCleanClaims(rawClaims, entry.path, nextId);
 
-  return { claims, errors, nextId: nextId + claims.length };
+  return { claims, errors, warnings, nextId: nextId + claims.length };
 }
 
 /**
@@ -123,6 +132,7 @@ export async function runStage2(params: Stage2Params): Promise<ClaimsResult> {
 
       nextId = processed.nextId;
       result.errors.push(...processed.errors);
+      result.warnings.push(...processed.warnings);
 
       if (processed.claims.length > 0) {
         collected.push(...processed.claims);

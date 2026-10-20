@@ -87,6 +87,24 @@ describe("runStage2()", () => {
     expect(result.byFile).toEqual({ "resume.txt": 3 });
   });
 
+  it("смягчённый claim -> warnings с именем файла", async () => {
+    await writeFile(join(dir, "resume.txt"), "текст", "utf8");
+    await writeFilesJson([entry()]);
+
+    const invalid = { ...claim("цитата"), category: "achievement_metric", status: "supported" };
+    const result = await runStage2({
+      filesPath: join(dir, "files.json"),
+      claimsPath: join(dir, "claims.json"),
+      llmClient: okClient([invalid]),
+      promptConfig: { promptsDir },
+    });
+
+    expect(result.claims[0]?.category).toBe("result");
+    expect(result.warnings.some((warning) => warning.includes("resume.txt") && warning.includes("category"))).toBe(
+      true,
+    );
+  });
+
   it("flagged_synthetic пропускается", async () => {
     await writeFilesJson([entry({ path: "bad.txt", name: "bad.txt", kind: "flagged_synthetic" })]);
 
