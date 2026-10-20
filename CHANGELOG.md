@@ -1,6 +1,6 @@
 <!-- markdownlint-disable -->
 
-# 1.0.0 (2026-10-17)
+# 1.0.0 (2026-10-20)
 
 ### Bug Fixes
 
@@ -35,6 +35,7 @@
 - **llm:** add prompt loader, response schemas, and prompt registry ([0090e03](https://github.com/stsgs1980/Resume-audit/commit/0090e0324c5976bacc842371209108a1d17f6d80))
 - **llm:** add remaining LLM prompts (roles, generation, verification) ([e15feab](https://github.com/stsgs1980/Resume-audit/commit/e15feab397b17d19cdccac728a546a1ff5d9a6ea))
 - **llm:** add request logging with rotation ([41172d7](https://github.com/stsgs1980/Resume-audit/commit/41172d7be464ca76109937f235e423be7d54ab8e))
+- **pipeline:** add end-to-end CLI orchestrator ([7fc62ee](https://github.com/stsgs1980/Resume-audit/commit/7fc62eeefa27a06d174961b1f0e43d336fd9516a))
 - **pipeline:** add pipeline layer with eslint boundaries ([7982c68](https://github.com/stsgs1980/Resume-audit/commit/7982c686a96273214b4f0e4f587fbc0878ff3fe8))
 - **pipeline:** add stage 1 file inventory with classification ([93ee2b4](https://github.com/stsgs1980/Resume-audit/commit/93ee2b4888d232aef92f5a809e05ceb93f6be52c))
 - **pipeline:** add stage 2 claims extraction via LLM ([5a8f352](https://github.com/stsgs1980/Resume-audit/commit/5a8f3528f12d4902ff4271d595567bdb7460d738))
